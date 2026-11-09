@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.jarvisblue.feature.studio.gold.GoldMarketRoute
 import com.jarvisblue.core.model.Language
 import com.jarvisblue.core.ui.components.GlowCard
 import com.jarvisblue.core.ui.components.JarvisScaffold
@@ -62,7 +63,8 @@ fun StudioRoute(
         subtitle = when (tab) {
             0 -> "AI development workbench"
             1 -> "Defensive security laboratory"
-            else -> "Quantum research laboratory"
+            2 -> "Quantum research laboratory"
+            else -> "XAU/USD gold market research"
         },
         modifier = modifier,
     ) { padding ->
@@ -75,6 +77,7 @@ fun StudioRoute(
                 Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Dev") })
                 Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Cyber") })
                 Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Quantum") })
+                Tab(selected = tab == 3, onClick = { tab = 3 }, text = { Text("Gold") })
             }
             when (tab) {
                 0 -> DevStudioScreen(
@@ -98,13 +101,14 @@ fun StudioRoute(
                     onProbe = cyberViewModel::probeHost,
                     onReview = cyberViewModel::reviewText,
                 )
-                else -> QuantumLabScreen(
+                2 -> QuantumLabScreen(
                     state = quantumState,
                     onPreset = quantumViewModel::loadPreset,
                     onSimulate = quantumViewModel::simulate,
                     onAddGate = quantumViewModel::addGate,
                     onRemoveGate = quantumViewModel::removeLastGate,
                 )
+                else -> GoldMarketRoute()
             }
         }
     }
