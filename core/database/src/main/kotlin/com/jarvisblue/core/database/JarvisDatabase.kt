@@ -67,28 +67,26 @@ abstract class JarvisDatabase : RoomDatabase() {
             val prefs = context.getSharedPreferences("jarvis_blue_db", Context.MODE_PRIVATE)
             val existing = prefs.getString(PASSPHRASE_PREF, null)
             if (existing != null) {
-                return runCatching { CipherBox().decrypt(existing) }.getOrElse {
-                    generateAndStore(context, prefs)
-                }
+                // NEVER silently replace an existing SQLCipher passphrase.
+                // Doing so would make the existing encrypted database unreadable.
+                // Keep the saved envelope intact and surface the real error.
+                return CipherBox().decrypt(existing)
             }
-            return generateAndStore(context, prefs)
+            return generateAndStore(prefs)
         }
 
         private fun generateAndStore(
-            context: Context,
             prefs: android.content.SharedPreferences,
         ): ByteArray {
-            val key = CipherBox(KeystoreKeyManager()).let { box ->
-                // 32 bytes of entropy from the platform CSPRNG.
-                val raw = java.security.SecureRandom().let { rnd ->
-                    ByteArray(32).also { rnd.nextBytes(it) }
-                }
-                box.encrypt(raw)
+            // 32 bytes of entropy from the platform CSPRNG.
+            val raw = ByteArray(32).also { java.security.SecureRandom().nextBytes(it) }
+            val encrypted = CipherBox(KeystoreKeyManager()).encrypt(raw)
+            // Commit synchronously so a database is never created with a
+            // passphrase that was not durably recorded.
+            check(prefs.edit().putString(PASSPHRASE_PREF, encrypted).commit()) {
+                "Unable to persist encrypted database passphrase"
             }
-            prefs.edit().putString(PASSPHRASE_PREF, key).apply()
-            return runCatching { CipherBox().decrypt(key) }.getOrElse {
-                CipherBox().decrypt(key)
-            }
+            return raw
         }
     }
 }
