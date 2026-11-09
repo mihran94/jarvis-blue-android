@@ -1,5 +1,7 @@
 package com.jarvisblue.feature.command
 
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jarvisblue.core.database.AuditDao
@@ -47,6 +49,7 @@ data class SettingsUiState(
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val secretVault: SecretVault,
     private val providerConfigRepository: ProviderConfigRepository,
     private val auditDao: AuditDao,
@@ -61,6 +64,10 @@ class SettingsViewModel @Inject constructor(
     val state: StateFlow<SettingsUiState> = _state.asStateFlow()
 
     init {
+        _state.value = _state.value.copy(
+            darkTheme = context.getSharedPreferences("jarvis_ui", Context.MODE_PRIVATE)
+                .getBoolean("dark_theme", true),
+        )
         viewModelScope.launch { refreshProviders() }
         viewModelScope.launch { refreshAudit() }
         _state.value = _state.value.copy(hardwareBackedKey = keyManager.isHardwareBacked)
@@ -68,21 +75,35 @@ class SettingsViewModel @Inject constructor(
 
     private suspend fun refreshProviders() {
         val configs = providerConfigRepository.observeAll().first()
-        val rows = ProviderId.entries.map { providerId ->
+        val visibleProviders = listOf(ProviderId.GEMINI, ProviderId.OPENAI, ProviderId.MINIMAX, ProviderId.OPENAI_COMPATIBLE)
+        val rows = visibleProviders.map { providerId ->
             val config = configs.firstOrNull { it.providerId == providerId } ?: ProviderConfig(providerId)
             val alias = when (providerId) {
                 ProviderId.OPENAI -> SecretVault.ALIAS_OPENAI
                 ProviderId.GEMINI -> SecretVault.ALIAS_GEMINI
                 ProviderId.MINIMAX -> SecretVault.ALIAS_MINIMAX
-                ProviderId.OLLAMA -> SecretVault.ALIAS_OLLAMA
-                ProviderId.OPENAI_COMPATIBLE -> SecretVault.ALIAS_OLLAMA
+                ProviderId.OLLAMA -> null
+                ProviderId.OPENAI_COMPATIBLE -> SecretVault.ALIAS_OPENAI_COMPATIBLE
                 ProviderId.OFFLINE_ECHO -> null
             }
             ProviderRow(
                 providerId = providerId,
                 enabled = config.enabled,
-                baseUrl = config.baseUrl.orEmpty(),
-                modelId = config.defaultModelId.orEmpty(),
+                baseUrl = config.baseUrl?.takeIf { it.isNotBlank() } ?: when (providerId) {
+                    ProviderId.GEMINI -> "https://generativelanguage.googleapis.com/v1beta"
+                    ProviderId.OPENAI -> "https://api.openai.com/v1"
+                    ProviderId.MINIMAX -> "https://api.minimax.io/v1"
+                    else -> ""
+                },
+                modelId = config.defaultModelId?.takeIf { it.isNotBlank() }?.let { saved ->
+                    if (providerId == ProviderId.GEMINI && saved == "gemini-2.0-flash")
+                        "gemini-3.8-flash" else saved
+                } ?: when (providerId) {
+                    ProviderId.GEMINI -> "gemini-3.8-flash"
+                    ProviderId.OPENAI -> "gpt-4o-mini"
+                    ProviderId.MINIMAX -> "MiniMax-M3.1-Flash"
+                    else -> ""
+                },
                 hasKey = alias?.let { secretVault.has(it) } == true,
                 maskedKey = alias?.let { secretVault.masked(it) },
                 health = router.cachedHealth()[providerId],
@@ -101,27 +122,36 @@ class SettingsViewModel @Inject constructor(
             providerConfigRepository.save(
                 (existing ?: ProviderConfig(providerId)).copy(enabled = enabled),
             )
+            router.invalidateHealth(providerId)
             refreshProviders()
         }
     }
 
-    fun setProviderBaseUrl(providerId: ProviderId, baseUrl: String) {
+    /** Persist URL and model together to avoid racing two independent writes. */
+    fun setProviderConnection(providerId: ProviderId, baseUrl: String, modelId: String) {
         viewModelScope.launch {
+            val normalizedUrl = baseUrl.trim().trimEnd('/')
+            if (normalizedUrl.isNotEmpty() && !normalizedUrl.startsWith("https://", ignoreCase = true)) {
+                _state.value = _state.value.copy(
+                    statusLine = "Base URL must use HTTPS",
+                    error = "Use a trusted HTTPS provider endpoint",
+                )
+                return@launch
+            }
+            if (providerId == ProviderId.OPENAI_COMPATIBLE && normalizedUrl.isBlank()) {
+                _state.value = _state.value.copy(statusLine = "Custom endpoint needs an HTTPS URL")
+                return@launch
+            }
             val existing = providerConfigRepository.observeAll().first().firstOrNull { it.providerId == providerId }
             providerConfigRepository.save(
-                (existing ?: ProviderConfig(providerId)).copy(baseUrl = baseUrl),
+                (existing ?: ProviderConfig(providerId)).copy(
+                    baseUrl = normalizedUrl,
+                    defaultModelId = modelId.trim(),
+                ),
             )
+            router.invalidateHealth(providerId)
             refreshProviders()
-        }
-    }
-
-    fun setProviderModel(providerId: ProviderId, modelId: String) {
-        viewModelScope.launch {
-            val existing = providerConfigRepository.observeAll().first().firstOrNull { it.providerId == providerId }
-            providerConfigRepository.save(
-                (existing ?: ProviderConfig(providerId)).copy(defaultModelId = modelId),
-            )
-            refreshProviders()
+            _state.value = _state.value.copy(statusLine = "Provider settings saved. Run Health check.", error = null)
         }
     }
 
@@ -130,15 +160,14 @@ class SettingsViewModel @Inject constructor(
             ProviderId.OPENAI -> SecretVault.ALIAS_OPENAI
             ProviderId.GEMINI -> SecretVault.ALIAS_GEMINI
             ProviderId.MINIMAX -> SecretVault.ALIAS_MINIMAX
-            ProviderId.OLLAMA, ProviderId.OPENAI_COMPATIBLE -> SecretVault.ALIAS_OLLAMA
+            ProviderId.OLLAMA -> null
+            ProviderId.OPENAI_COMPATIBLE -> SecretVault.ALIAS_OPENAI_COMPATIBLE
             ProviderId.OFFLINE_ECHO -> null
         } ?: return
         viewModelScope.launch {
-            if (key.isBlank()) {
-                secretVault.remove(alias)
-            } else {
-                secretVault.put(alias, key.trim())
-            }
+            if (key.isBlank()) return@launch
+            secretVault.put(alias, key.trim())
+            router.invalidateHealth(providerId)
             refreshProviders()
             _state.value = _state.value.copy(statusLine = "Key for ${providerId.displayName} saved in the Keystore vault")
         }
@@ -157,6 +186,8 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun setDarkTheme(dark: Boolean) {
+        context.getSharedPreferences("jarvis_ui", Context.MODE_PRIVATE)
+            .edit().putBoolean("dark_theme", dark).apply()
         _state.value = _state.value.copy(darkTheme = dark)
     }
 

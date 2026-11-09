@@ -62,8 +62,10 @@ class AssistantViewModel @Inject constructor(
             recognitionAvailable = recognizer.supportsRecognition(),
             registeredTools = toolRegistry.specs().map { it.name },
         )
-        // TTS loads voices asynchronously: do not show "no voice pack" too early.
         tts.onStateChanged = { newState ->
+            // Android's TTS initialisation callback is asynchronous. Querying
+            // availableLanguages immediately after initialise() returns empty
+            // even when English is installed: update ONLY after READY.
             viewModelScope.launch {
                 if (newState == TextToSpeechController.State.READY ||
                     newState == TextToSpeechController.State.READY_WITH_FALLBACK) {
@@ -79,9 +81,16 @@ class AssistantViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            try { tts.initialise() }
-            catch (exception: Exception) {
-                _state.value = _state.value.copy(error = "Speech output could not initialise on this device")
+            // Optional TTS engines may be absent or misconfigured on some
+            // Android 12 devices. Report the failure instead of allowing an
+            // uncaught coroutine exception to terminate the app process.
+            try {
+                tts.initialise()
+                // The actual installed-language list is filled via the callback.
+            } catch (exception: Exception) {
+                _state.value = _state.value.copy(
+                    error = "Speech output could not initialise on this device",
+                )
             }
         }
         viewModelScope.launch {
@@ -95,15 +104,17 @@ class AssistantViewModel @Inject constructor(
         _state.value = _state.value.copy(language = language)
     }
 
-    /** Push-to-talk: recognize once, then answer using the configured AI. */
+    /** Push-to-talk: recognize exactly once, then answer through the configured AI. */
     fun startListening() {
         if (_state.value.isListening) return
         _state.value = _state.value.copy(
-            isListening = true, transcript = "", error = null, statusLine = "Listening…", response = "",
+            isListening = true, transcript = "", error = null,
+            statusLine = "Listening…", response = "",
         )
         listeningJob = viewModelScope.launch {
             try {
-                // The Android system recognizer may use a third-party cloud service.
+                // Push-to-talk prioritizes working speech recognition over offline-only.
+                // The system recognizer may use a provider's cloud service.
                 recognizer.listen(
                     _state.value.language,
                     engineMode = SpeechRecognizerController.EngineMode.SYSTEM_DEFAULT,
@@ -122,7 +133,9 @@ class AssistantViewModel @Inject constructor(
                         },
                     )
                     if (recognition.isFinal && recognition.transcript.isNotBlank()) {
-                        _state.value = _state.value.copy(isListening = false, statusLine = "Thinking…")
+                        _state.value = _state.value.copy(
+                            isListening = false, statusLine = "Thinking…",
+                        )
                         answerSpokenQuestion(recognition.transcript, _state.value.language)
                     }
                 }
@@ -139,7 +152,7 @@ class AssistantViewModel @Inject constructor(
         }
     }
 
-    /** Stop must cancel the recognizer collection and release the microphone. */
+    /** Never let a cancelled microphone session keep collecting in the background. */
     fun stopListening() {
         listeningJob?.cancel()
         listeningJob = null
@@ -147,7 +160,8 @@ class AssistantViewModel @Inject constructor(
     }
 
     private suspend fun answerSpokenQuestion(transcript: String, language: Language) {
-        // Voice replies are text-only; device tools are never run from noisy speech.
+        // Voice interaction is text-only by design; never execute Android tools
+        // or automate actions from noisy speech without a separate permission gate.
         try {
             val answer = aiRouter.route(AiRequest(
                 messages = listOf(

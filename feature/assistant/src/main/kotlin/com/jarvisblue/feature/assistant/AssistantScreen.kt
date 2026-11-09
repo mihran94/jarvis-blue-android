@@ -2,9 +2,9 @@ package com.jarvisblue.feature.assistant
 
 import androidx.compose.foundation.layout.Arrangement
 import android.content.Intent
+import androidx.core.content.ContextCompat
 import android.provider.Settings
 import android.speech.tts.TextToSpeech
-import androidx.core.content.ContextCompat
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -69,16 +69,17 @@ fun AssistantRoute(
         onStartListening = viewModel::startListening,
         onStopListening = viewModel::stopListening,
         onWakeWordToggle = { enabled ->
+            val context = appContext
             val service = Intent().setClassName(
-                appContext.packageName, "com.jarvisblue.mobile.assistant.WakeWordService",
+                context.packageName, "com.jarvisblue.mobile.assistant.WakeWordService",
             )
-            if (enabled && microphoneGranted && state.onDeviceAvailable) {
-                runCatching { ContextCompat.startForegroundService(appContext, service) }
+            if (enabled && microphoneGranted && state.recognitionAvailable) {
+                runCatching { ContextCompat.startForegroundService(context, service) }
                     .onSuccess { viewModel.setWakeWordEnabled(true) }
                     .onFailure { viewModel.setWakeWordEnabled(false) }
             } else {
                 service.action = "com.jarvisblue.mobile.wake.STOP"
-                runCatching { appContext.startService(service) }
+                runCatching { context.startService(service) }
                 viewModel.setWakeWordEnabled(false)
             }
         },
@@ -175,7 +176,9 @@ fun AssistantScreen(
                 }
                 OutlinedButton(onClick = {
                     runCatching { context.startActivity(Intent(Settings.ACTION_VOICE_INPUT_SETTINGS)) }
-                        .onFailure { runCatching { context.startActivity(Intent(Settings.ACTION_SETTINGS)) } }
+                        .onFailure {
+                            runCatching { context.startActivity(Intent(Settings.ACTION_SETTINGS)) }
+                        }
                 }) {
                     Text("Voice settings")
                 }
@@ -222,15 +225,15 @@ fun AssistantScreen(
                     }
                     if (!state.onDeviceAvailable && state.recognitionAvailable) {
                         NoticeBanner(
-                            text = "Push-to-talk may use a cloud speech service. " +
-                                "Wake word requires an on-device recognizer.",
+                            text = "Push-to-talk may use a network speech service. " +
+                                "Wake-word listening requires an available on-device recognizer.",
                             accent = AmberWarn,
                         )
                     }
                     if (!state.recognitionAvailable) {
                         NoticeBanner(
-                            text = "No Android speech service detected. Install or enable a " +
-                                "speech recognition service, then select it in Voice settings.",
+                            text = "Install or enable an Android speech recognition service " +
+                                "(for example Speech Services by Google), then select it in Voice settings.",
                             accent = AmberWarn,
                         )
                     }

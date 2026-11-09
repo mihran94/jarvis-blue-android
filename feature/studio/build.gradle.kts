@@ -46,6 +46,8 @@ dependencies {
     api(project(":core:ai"))
     api(project(":core:tools"))
     api(project(":core:ui"))
+    implementation(libs.okhttp)
+    implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.hilt.navigation.compose)

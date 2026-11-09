@@ -37,7 +37,9 @@ data class ChatUiState(
     val detectedLanguage: Language? = null,
     val providerId: ProviderId? = null,
     val modelId: String? = null,
-    val availableProviders: List<ProviderId> = ProviderId.entries.toList(),
+    val availableProviders: List<ProviderId> = listOf(
+        ProviderId.GEMINI, ProviderId.OPENAI, ProviderId.MINIMAX, ProviderId.OPENAI_COMPATIBLE,
+    ),
     val pendingConfirmation: ConfirmationRequest? = null,
     val error: String? = null,
     val lastToolSummary: String? = null,
@@ -129,7 +131,7 @@ class ChatViewModel @Inject constructor(
             try {
                 val reply = agent.run(
                     userText = text,
-                    // AssistantAgent appends userText; avoid duplicate user prompt.
+                    // The agent appends userText itself; don't send it twice.
                     history = _state.value.messages.dropLast(1),
                     language = userMessage.language,
                     preferredProvider = _state.value.providerId,
