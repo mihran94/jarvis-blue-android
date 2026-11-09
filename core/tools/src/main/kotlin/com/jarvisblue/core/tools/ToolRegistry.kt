@@ -39,12 +39,9 @@ class ToolRegistry {
 
     fun specs(): List<ToolSpec> = all().map { it.spec }
 
-    /** Schemas for the OpenAI/Ollama tool-calling format. */
+    /** Schemas for OpenAI-compatible tool calls. */
     fun openAiSchemas(include: Set<String> = tools.keys): List<JsonObject> =
         all().filter { it.spec.name in include }.map { ToolSchema.toOpenAiTool(it.spec) }
-
-    fun ollamaSchemas(include: Set<String> = tools.keys): List<JsonObject> =
-        all().filter { it.spec.name in include }.map { ToolSchema.toOllamaTool(it.spec) }
 
     companion object {
         val NAME_PATTERN = Regex("^[a-z][a-z0-9_]{2,63}$")
