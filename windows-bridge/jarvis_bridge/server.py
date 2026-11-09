@@ -328,6 +328,26 @@ async def status(request: Request) -> JSONResponse:
     return JSONResponse(system_status())
 
 
+@app.get("/api/broker/exness/account")
+async def exness_account(request: Request) -> JSONResponse:
+    """Signed bridge-authenticated, read-only Exness account summary.
+
+    The Android client never sends/receives Exness credentials.
+    Keep bridge private behind a VPN; don't expose this route to the Internet.
+    """
+    body = await _read_body(request)
+    _verify(request, body)
+    try:
+        from .exness_readonly import run_check
+        result = await asyncio.to_thread(run_check)
+    except ValueError as exc:
+        # No raw provider response or private key data in errors.
+        raise HTTPException(status_code=503, detail=str(exc)) from None
+    except Exception:
+        raise HTTPException(status_code=503, detail="Broker read-only connector unavailable") from None
+    return JSONResponse(result)
+
+
 @app.get("/api/jobs")
 async def list_jobs(request: Request) -> JSONResponse:
     body = await _read_body(request)
