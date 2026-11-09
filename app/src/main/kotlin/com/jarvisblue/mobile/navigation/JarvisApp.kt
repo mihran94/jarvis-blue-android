@@ -3,6 +3,9 @@ package com.jarvisblue.mobile.navigation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,7 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Assistant
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Dashboard
@@ -22,6 +25,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -32,7 +38,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,6 +63,8 @@ import com.jarvisblue.feature.command.SettingsRoute
 import com.jarvisblue.feature.command.TasksRoute
 import com.jarvisblue.feature.command.WindowsRoute
 import com.jarvisblue.feature.studio.StudioRoute
+import com.jarvisblue.mobile.updates.AppUpdateCard
+import com.jarvisblue.mobile.ui.ResponsiveSizePolicy
 import dagger.hilt.android.lifecycle.HiltViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
@@ -68,7 +78,7 @@ private enum class JarvisTab(
     val label: String,
     val icon: ImageVector,
 ) {
-    ASSISTANT("Assistant", Icons.Filled.Assistant),
+    HOME("Home", Icons.Filled.Home),
     CHAT("Chat", Icons.Filled.Chat),
     STUDIO("Studio", Icons.Filled.Code),
     CONTROL("Control", Icons.Filled.Dashboard),
@@ -82,65 +92,106 @@ fun JarvisApp(
     onRequestMicrophone: () -> Unit,
     microphoneGranted: Boolean,
 ) {
-    var tab by remember { mutableStateOf(JarvisTab.ASSISTANT) }
+    var tab by rememberSaveable { mutableStateOf(JarvisTab.HOME) }
+    var voiceOpen by rememberSaveable { mutableStateOf(false) }
+    var studioInitialTab by rememberSaveable { mutableIntStateOf(0) }
     val emergencyViewModel: EmergencyViewModel = hiltViewModel()
     val emergencyState by emergencyViewModel.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(assistantRequested) {
         if (assistantRequested) {
-            tab = JarvisTab.ASSISTANT
+            tab = JarvisTab.HOME
+            voiceOpen = true
             onAssistantHandled()
         }
     }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
-                JarvisTab.entries.forEach { entry ->
-                    NavigationBarItem(
-                        selected = tab == entry,
-                        onClick = { tab = entry },
-                        icon = { Icon(entry.icon, contentDescription = entry.label) },
-                        label = { Text(entry.label, style = MaterialTheme.typography.labelSmall) },
-                    )
+    // BoxWithConstraints uses the actual app window. Changes on rotation, folding,
+    // external-display changes and Android split-screen without manual detection.
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val showRail = ResponsiveSizePolicy.showNavigationRail(maxWidth.value)
+        val narrowPhone = maxWidth < 390.dp
+        val setTab: (JarvisTab) -> Unit = { next ->
+            tab = next
+            if (next == JarvisTab.HOME) voiceOpen = false
+            if (next == JarvisTab.STUDIO) studioInitialTab = 0
+        }
+        Scaffold(
+            containerColor = MaterialTheme.colorScheme.background,
+            bottomBar = {
+                if (!showRail) {
+                    NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+                        JarvisTab.entries.forEach { entry ->
+                            NavigationBarItem(
+                                selected = tab == entry,
+                                onClick = { setTab(entry) },
+                                icon = { Icon(entry.icon, contentDescription = entry.label) },
+                                label = { Text(entry.label, style = MaterialTheme.typography.labelSmall) },
+                                alwaysShowLabel = !narrowPhone,
+                            )
+                        }
+                    }
                 }
-            }
-        },
-    ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            MaterialTheme.colorScheme.background,
-                            MaterialTheme.colorScheme.surface.copy(alpha = 0.35f),
-                            MaterialTheme.colorScheme.background,
-                        ),
-                    ),
-                ),
-        ) {
-            when (tab) {
-                JarvisTab.ASSISTANT -> AssistantRoute(
-                    onRequestMicrophone = onRequestMicrophone,
-                    microphoneGranted = microphoneGranted,
-                )
-                JarvisTab.CHAT -> ChatRoute()
-                JarvisTab.STUDIO -> StudioRoute()
-                JarvisTab.CONTROL -> ControlCenterScreen()
-                JarvisTab.SETTINGS -> SettingsRoute()
-            }
+            },
+        ) { padding ->
+            Row(Modifier.fillMaxSize().padding(padding)) {
+                if (showRail) {
+                    NavigationRail(containerColor = MaterialTheme.colorScheme.surface) {
+                        JarvisTab.entries.forEach { entry ->
+                            NavigationRailItem(
+                                selected = tab == entry,
+                                onClick = { setTab(entry) },
+                                icon = { Icon(entry.icon, contentDescription = entry.label) },
+                                label = { Text(entry.label, style = MaterialTheme.typography.labelSmall) },
+                            )
+                        }
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .background(Brush.verticalGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.background,
+                                MaterialTheme.colorScheme.surface.copy(alpha = 0.35f),
+                                MaterialTheme.colorScheme.background,
+                            ),
+                        )),
+                ) {
+                    when (tab) {
+                        JarvisTab.HOME -> if (voiceOpen) {
+                            AssistantRoute(
+                                onRequestMicrophone = onRequestMicrophone,
+                                microphoneGranted = microphoneGranted,
+                            )
+                        } else {
+                            JarvisHomeDashboard(
+                                onVoice = { voiceOpen = true },
+                                onChat = { tab = JarvisTab.CHAT },
+                                onGold = { studioInitialTab = 3; tab = JarvisTab.STUDIO },
+                                onStudio = { studioInitialTab = 0; tab = JarvisTab.STUDIO },
+                                onControl = { tab = JarvisTab.CONTROL },
+                                onSettings = { tab = JarvisTab.SETTINGS },
+                            )
+                        }
+                        JarvisTab.CHAT -> ChatRoute()
+                        JarvisTab.STUDIO -> key(studioInitialTab) { StudioRoute(initialTab = studioInitialTab) }
+                        JarvisTab.CONTROL -> ControlCenterScreen()
+                        JarvisTab.SETTINGS -> SettingsRoute(topContent = { AppUpdateCard() })
+                    }
 
-            if (emergencyState.engaged) {
-                EmergencyBanner(
-                    reason = emergencyState.reason,
-                    onRelease = emergencyViewModel::release,
-                )
+                    if (emergencyState.engaged) {
+                        EmergencyBanner(
+                            reason = emergencyState.reason,
+                            onRelease = emergencyViewModel::release,
+                        )
+                    }
+                }
             }
         }
     }
+
 }
 
 @Composable
@@ -177,7 +228,7 @@ private fun EmergencyBanner(reason: String?, onRelease: () -> Unit) {
 private fun ControlCenterScreen() {
     var tab by remember { mutableIntStateOf(0) }
     Column(modifier = Modifier.fillMaxSize()) {
-        TabRow(selectedTabIndex = tab) {
+        ScrollableTabRow(selectedTabIndex = tab, edgePadding = 8.dp) {
             listOf("Permissions", "Tasks", "Memory", "Windows").forEachIndexed { index, label ->
                 Tab(
                     selected = tab == index,

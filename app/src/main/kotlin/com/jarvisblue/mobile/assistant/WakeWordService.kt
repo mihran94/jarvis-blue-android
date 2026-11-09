@@ -43,7 +43,7 @@ class WakeWordService : Service() {
 
     @Inject lateinit var matcher: WakePhraseMatcher
 
-    // SpeechRecognizer methods must run on Android's main thread.
+    // Android SpeechRecognizer methods must be called on the main thread.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var listenJob: Job? = null
 
@@ -89,6 +89,8 @@ class WakeWordService : Service() {
             while (true) {
                 try {
                     var failed = false
+                    // Continuous listening stays on-device; never stream a background
+                    // wake word microphone to a cloud recognition provider.
                     recognizer.listen(
                         Language.ENGLISH,
                         SpeechRecognizerController.EngineMode.ON_DEVICE_ONLY,
@@ -123,7 +125,8 @@ class WakeWordService : Service() {
             putExtra(JarvisVoiceInteractionSession.EXTRA_FROM_ASSISTANT, true)
         }
         runCatching { startActivity(intent) }
-            // Android may block an activity launch from a background service.
+            // Android can refuse background activity launches. The foreground
+            // notification remains visible so the user can open the app.
     }
 
     private fun stopListening() {

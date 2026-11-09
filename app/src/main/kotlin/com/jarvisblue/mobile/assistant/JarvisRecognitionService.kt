@@ -24,8 +24,9 @@ class JarvisRecognitionService : RecognitionService() {
         val target = callback ?: return
         activeCallback = target
 
-        // Do not proxy recognition to our own service; it causes recursion
-        // when JARVIS BLUE is the system-selected recognition provider.
+        // Never route Android's recognizer back to our own proxy service.
+        // If JARVIS is the selected default engine, selecting ourselves here
+        // would otherwise recurse endlessly.
         val external = packageManager.queryIntentServices(
             Intent(RecognitionService.SERVICE_INTERFACE), 0,
         ).firstNotNullOfOrNull { info ->

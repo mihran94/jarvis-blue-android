@@ -1,6 +1,7 @@
 package com.jarvisblue.mobile
 
 import android.Manifest
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.compose.setContent
@@ -37,10 +38,19 @@ class MainActivity : FragmentActivity() {
         microphonePermissionGranted = granted
     }
 
-    private var microphonePermissionGranted = false
+    private var microphonePermissionGranted by mutableStateOf(false)
+    private var screenLocked by mutableStateOf(false)
+    private var darkThemeEnabled by mutableStateOf(true)
+    private val uiPreferences by lazy { getSharedPreferences("jarvis_ui", MODE_PRIVATE) }
+    private val themeListener = SharedPreferences.OnSharedPreferenceChangeListener { preferences, key ->
+        if (key == "dark_theme") darkThemeEnabled = preferences.getBoolean("dark_theme", true)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        darkThemeEnabled = uiPreferences.getBoolean("dark_theme", true)
+        uiPreferences.registerOnSharedPreferenceChangeListener(themeListener)
+        screenLocked = appLock.appLockEnabled
         microphonePermissionGranted = ContextCompat.checkSelfPermission(
             this,
             Manifest.permission.RECORD_AUDIO,
@@ -48,17 +58,16 @@ class MainActivity : FragmentActivity() {
 
         setContent {
             val scope = rememberCoroutineScope()
-            var locked by remember { mutableStateOf(appLock.appLockEnabled) }
             var assistantRequested by remember {
                 mutableStateOf(intent?.getBooleanExtra(EXTRA_FROM_ASSISTANT, false) == true)
             }
 
-            JarvisBlueTheme {
-                if (locked) {
+            JarvisBlueTheme(darkTheme = darkThemeEnabled) {
+                if (screenLocked) {
                     com.jarvisblue.mobile.navigation.LockScreen(
                         onUnlock = {
                             appLock.unlock()
-                            locked = false
+                            screenLocked = false
                         },
                         onUseBiometrics = {
                             val gate = BiometricGate(this@MainActivity)
@@ -70,7 +79,7 @@ class MainActivity : FragmentActivity() {
                                 )
                                 if (result is BiometricGate.BiometricResult.Success) {
                                     appLock.unlock()
-                                    locked = false
+                                    screenLocked = false
                                 }
                             }
                         },
@@ -89,11 +98,17 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    override fun onDestroy() {
+        uiPreferences.unregisterOnSharedPreferenceChangeListener(themeListener)
+        super.onDestroy()
+    }
+
     override fun onResume() {
         super.onResume()
         if (appLock.appLockEnabled && !appLock.refreshSession()) {
-            // Session expired while the app was in the background.
-            recreate()
+            // Do not recreate a locked activity in onResume: the locked state
+            // otherwise causes an endless recreate/onResume loop.
+            screenLocked = true
         }
     }
 

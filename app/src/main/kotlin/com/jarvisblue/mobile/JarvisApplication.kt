@@ -6,7 +6,6 @@ import android.app.NotificationManager
 import android.os.Build
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
-import androidx.work.WorkManager
 import com.jarvisblue.core.tools.CodeQualityChecker
 import com.jarvisblue.core.tools.DeviceControlEngine
 import com.jarvisblue.core.tools.FileTools
@@ -16,6 +15,8 @@ import com.jarvisblue.core.tools.NetworkDiagnostics
 import com.jarvisblue.core.tools.QuantumSimulator
 import com.jarvisblue.core.tools.SecurityScanner
 import com.jarvisblue.core.tools.ToolRegistry
+import android.util.Log
+import dagger.Lazy
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
@@ -24,25 +25,25 @@ class JarvisApplication : Application(), Configuration.Provider {
 
     @Inject lateinit var workerFactory: HiltWorkerFactory
 
-    @Inject lateinit var toolRegistry: ToolRegistry
+    @Inject lateinit var toolRegistry: Lazy<ToolRegistry>
 
-    @Inject lateinit var deviceControlEngine: DeviceControlEngine
+    @Inject lateinit var deviceControlEngine: Lazy<DeviceControlEngine>
 
-    @Inject lateinit var fileTools: FileTools
+    @Inject lateinit var fileTools: Lazy<FileTools>
 
-    @Inject lateinit var networkDiagnostics: NetworkDiagnostics
+    @Inject lateinit var networkDiagnostics: Lazy<NetworkDiagnostics>
 
-    @Inject lateinit var securityScanner: SecurityScanner
+    @Inject lateinit var securityScanner: Lazy<SecurityScanner>
 
-    @Inject lateinit var codeQualityChecker: CodeQualityChecker
+    @Inject lateinit var codeQualityChecker: Lazy<CodeQualityChecker>
 
-    @Inject lateinit var quantumSimulator: QuantumSimulator
+    @Inject lateinit var quantumSimulator: Lazy<QuantumSimulator>
 
-    @Inject lateinit var memoryTools: MemoryTools
+    @Inject lateinit var memoryTools: Lazy<MemoryTools>
 
-    @Inject lateinit var assistantServices: AssistantServicesImpl
+    @Inject lateinit var assistantServices: Lazy<AssistantServicesImpl>
 
-    @Inject lateinit var workspaceRoot: java.io.File
+    @Inject lateinit var workspaceRoot: Lazy<java.io.File>
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
@@ -52,9 +53,17 @@ class JarvisApplication : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
-        WorkManager.initialize(this, workManagerConfiguration)
-        registerTools()
+        // WorkManager has a custom Configuration.Provider and the AndroidX Startup
+        // initializer is removed in the manifest. Let WorkManager initialise on
+        // first use instead of forcing database/worker startup on the UI path.
         createNotificationChannels()
+        try {
+            registerTools()
+        } catch (exception: Exception) {
+            // Optional assistant tools must not prevent the shell UI from opening.
+            // The full stack trace remains available through adb logcat.
+            Log.e(TAG, "Optional tool registration failed; continuing app startup", exception)
+        }
     }
 
     /**
@@ -64,19 +73,26 @@ class JarvisApplication : Application(), Configuration.Provider {
      * tool creation at runtime, so the permission matrix always matches reality.
      */
     private fun registerTools() {
-        if (toolRegistry.all().isNotEmpty()) return
+        val registry = toolRegistry.get()
+        if (registry.all().isNotEmpty()) return
         JarvisToolRegistrar(
-            registry = toolRegistry,
-            device = deviceControlEngine,
-            files = fileTools,
-            network = networkDiagnostics,
-            scanner = securityScanner,
-            quality = codeQualityChecker,
-            quantum = quantumSimulator,
-            services = assistantServices,
-            workspaceRoot = workspaceRoot,
+            registry = registry,
+            device = deviceControlEngine.get(),
+            files = fileTools.get(),
+            network = networkDiagnostics.get(),
+            scanner = securityScanner.get(),
+            quality = codeQualityChecker.get(),
+            quantum = quantumSimulator.get(),
+            services = assistantServices.get(),
+            workspaceRoot = workspaceRoot.get(),
         ).registerAll()
-        memoryTools.register(toolRegistry)
+        // Encrypted database loading is optional at startup. If keystore or
+        // SQLCipher setup fails the base assistant UI can still be opened.
+        try {
+            memoryTools.get().register(registry)
+        } catch (exception: Exception) {
+            Log.e(TAG, "Memory tools unavailable at startup", exception)
+        }
     }
 
     private fun createNotificationChannels() {
@@ -104,6 +120,7 @@ class JarvisApplication : Application(), Configuration.Provider {
     }
 
     companion object {
+        private const val TAG = "JarvisBlueStartup"
         const val WAKE_CHANNEL_ID = "jarvis_wake_word"
         const val REMINDER_CHANNEL_ID = "jarvis_reminders"
     }

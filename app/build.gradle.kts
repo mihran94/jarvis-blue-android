@@ -17,8 +17,8 @@ android {
         applicationId = "com.jarvisblue.mobile"
         minSdk = 31
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 10
+        versionName = "1.1.9"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
@@ -30,12 +30,15 @@ android {
             val keystoreProps = Properties().apply {
                 if (keystorePropsFile.exists()) keystorePropsFile.inputStream().use { load(it) }
             }
-            val storePath = rootProject.file(keystoreProps.getProperty("storeFile", ""))
-            if (storePath.exists()) {
-                storeFile = storePath
-                storePassword = keystoreProps.getProperty("storePassword")
-                keyAlias = keystoreProps.getProperty("keyAlias")
-                keyPassword = keystoreProps.getProperty("keyPassword")
+            val storePathProperty = keystoreProps.getProperty("storeFile")
+            if (!storePathProperty.isNullOrBlank()) {
+                val candidate = rootProject.file(storePathProperty)
+                if (candidate.isFile) {
+                    storeFile = candidate
+                    storePassword = keystoreProps.getProperty("storePassword")
+                    keyAlias = keystoreProps.getProperty("keyAlias")
+                    keyPassword = keystoreProps.getProperty("keyPassword")
+                }
             }
             // Sign with every scheme so the APK installs on sideloaders that
             // only understand v1 (older package installers) and on platforms
@@ -122,8 +125,6 @@ dependencies {
     implementation(libs.androidx.fragment.ktx)
 
     implementation(libs.hilt.android)
-    implementation(libs.androidx.hilt.work)
-    ksp(libs.androidx.hilt.compiler)
     implementation(libs.androidx.hilt.work)
     ksp(libs.androidx.hilt.compiler)
     ksp(libs.hilt.compiler)
