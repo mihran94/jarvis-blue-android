@@ -49,10 +49,10 @@ violating Android policy.
 | Feature | Status | Restriction |
 |---------|--------|-------------|
 | OpenAI / Gemini / minimax / OpenAI-compatible | Working | Requires the user's API key, stored in the Keystore-encrypted vault. Keys are never in the APK, never in logs (the `Redactor` scrubs them from every log line and audit row). |
-| Ollama (self-hosted) | Working | The user runs the server and reaches it over a VPN/tunnel. The app does not require a publicly reachable endpoint. |
+| Ollama (self-hosted) | Removed in v1.1.2 | Legacy configuration is hidden; no Ollama provider is registered. |
 | Offline fallback | Working | A deterministic responder that explains what is unavailable. It never fabricates an answer. |
 | Model routing / health / budgets | Working | Priority → health → task heuristic → daily token budget. |
-| Tool calling | Working | OpenAI function schema, Gemini `functionDeclarations`, Ollama tools. All arguments are schema-validated before execution. |
+| Tool calling | Working | OpenAI function schema, Gemini `functionDeclarations`. All arguments are schema-validated before execution. |
 
 ### 1.4 Windows bridge
 

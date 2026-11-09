@@ -3,22 +3,22 @@ package com.jarvisblue.core.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // ---- Core JARVIS BLUE palette ------------------------------------------------
-val BlueCore = Color(0xFF00A8FF)
+val BlueCore = Color(0xFF4DBFF4)
 val BlueBright = Color(0xFF4FC3FF)
 val BlueDeep = Color(0xFF0066CC)
 val BlueGlow = Color(0xFF7FDBFF)
-val CyanAccent = Color(0xFF00E5FF)
+val CyanAccent = Color(0xFF67E8F9)
 val VioletAccent = Color(0xFF7C4DFF)
 val AmberWarn = Color(0xFFFFC542)
 val RedCritical = Color(0xFFFF4D5A)
 val GreenOk = Color(0xFF2ED573)
 
 // ---- Dark surfaces -----------------------------------------------------------
-val VoidBlack = Color(0xFF05070D)
-val PanelBlack = Color(0xFF0A0E18)
-val PanelElevated = Color(0xFF111827)
-val PanelBlue = Color(0xFF0D1B2A)
-val HairlineBlue = Color(0xFF1E3A5F)
+val VoidBlack = Color(0xFF0A1428)
+val PanelBlack = Color(0xFF10243F)
+val PanelElevated = Color(0xFF152D49)
+val PanelBlue = Color(0xFF123451)
+val HairlineBlue = Color(0xFF285375)
 val TextPrimaryDark = Color(0xFFE6F1FF)
 val TextSecondaryDark = Color(0xFF8FA8C8)
 val TextMutedDark = Color(0xFF5B7396)

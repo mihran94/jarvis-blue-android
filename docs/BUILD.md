@@ -4,34 +4,6 @@ Everything below was executed on the machine that produced the delivered APKs.
 
 ---
 
-## 0. First-time clone (do this once)
-
-```bash
-git clone https://github.com/mihran94/jarvis-blue-android.git
-cd jarvis-blue-android
-
-# 1. Restore the Gradle wrapper JAR
-bash gradle/wrapper/restore-wrapper.sh
-
-# 2. Restore the execute bit on the scripts
-chmod +x gradlew gradlew.bat scripts/compat-check.sh
-```
-
-> **Why step 1?**
-> This repository was published through an API that transports file contents as
-> UTF-8 text, so the binary `gradle/wrapper/gradle-wrapper.jar` could not be
-> committed as a binary blob. It is stored byte-exact as
-> `gradle/wrapper/gradle-wrapper.jar.b64` (SHA-256
-> `2db75c40782f5e8ba1fc278a5574bab070adccb2d21ca5a6e5ed840888448046`) and
-> `restore-wrapper.sh` decodes it back into place. If you already have Gradle
-> 8.11.1 installed, `gradle wrapper` regenerates it just as well.
->
-> **Why step 2?**
-> The same API creates files with mode `100644`, so `gradlew` and
-> `scripts/compat-check.sh` arrive without the execute bit.
-
----
-
 ## 1. Toolchain
 
 | Tool | Version used | Minimum |

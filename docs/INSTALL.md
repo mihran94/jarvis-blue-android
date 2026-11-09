@@ -94,7 +94,7 @@ sha256sum app/build/outputs/apk/release/app-release.apk
 ### 4.1 AI provider (required for live intelligence)
 
 1. Open **Settings → AI providers**.
-2. Pick a provider (OpenAI, Gemini, minimax, Ollama, or any OpenAI-compatible
+2. Pick a provider (OpenAI, Gemini, MiniMax, or any trusted HTTPS OpenAI-compatible
    gateway).
 3. Enter the base URL (leave the default unless you know otherwise) and the
    model id.
@@ -104,7 +104,7 @@ sha256sum app/build/outputs/apk/release/app-release.apk
 The key is encrypted with the Android Keystore before it touches the disk. It
 is never written into the APK and never appears in a log or in the audit trail.
 
-For a fully local setup, run Ollama on your own machine and reach it over a
+For a remote custom setup, use a trusted compatible endpoint over a
 VPN/tunnel:
 
 ```

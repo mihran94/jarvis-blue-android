@@ -24,7 +24,7 @@ class SpeechRecognizerController(private val context: Context) {
     enum class EngineMode {
         /** Prefer the offline recogniser; fall back to the network engine. */
         PREFER_ON_DEVICE,
-        /** Wake word NEVER falls back to cloud recognition. */
+        /** For wake-word listening: NEVER fall back to cloud. */
         ON_DEVICE_ONLY,
         /** Use whatever the system picks. */
         SYSTEM_DEFAULT,
@@ -117,12 +117,12 @@ class SpeechRecognizerController(private val context: Context) {
 
     private data class SelectedRecognizer(val recognizer: SpeechRecognizer, val onDevice: Boolean)
 
-    /** True if Android reports an on-device recognizer service. */
+    /** Always check availability before creation (Android 12 / API 31+). */
     fun supportsOnDevice(): Boolean = runCatching {
         SpeechRecognizer.isOnDeviceRecognitionAvailable(context)
     }.getOrDefault(false)
 
-    /** A normal recognizer can exist without a downloaded offline pack. */
+    /** Returns true for either an offline or normal Android recognizer. */
     fun supportsRecognition(): Boolean = supportsOnDevice() || runCatching {
         SpeechRecognizer.isRecognitionAvailable(context)
     }.getOrDefault(false)
@@ -133,7 +133,8 @@ class SpeechRecognizerController(private val context: Context) {
                 .getOrNull()?.let { return SelectedRecognizer(it, onDevice = true) }
         }
         if (engineMode == EngineMode.ON_DEVICE_ONLY) return null
-        // System speech recognition may use a cloud provider; explicit push-to-talk only.
+        // Google/Samsung recognition service may work even without a downloaded
+        // offline language pack. It may send audio to the speech provider's cloud.
         if (runCatching { SpeechRecognizer.isRecognitionAvailable(context) }.getOrDefault(false)) {
             runCatching { SpeechRecognizer.createSpeechRecognizer(context) }
                 .getOrNull()?.let { return SelectedRecognizer(it, onDevice = false) }
