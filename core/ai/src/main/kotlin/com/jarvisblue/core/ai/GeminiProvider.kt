@@ -85,8 +85,9 @@ class GeminiProvider(private val httpClient: AiHttpClient) : AiProvider {
         val headers = mapOf("x-goog-api-key" to config.apiKey.orEmpty())
         val outcome = httpClient.postJson(url, payload, headers, config.timeoutSeconds)
         val firstError = outcome.errorOrNull
-        // When a tool declaration is rejected, retry ONCE as text-only.
-        // No tool can be executed in this fallback and no action is claimed.
+        // A provider schema change must not prevent a basic *text* conversation.
+        // Retry once with no tools ONLY for errors that explicitly mention the
+        // tool schema; never retry on auth errors, rate limits or generic 400s.
         val body = if (
             firstError != null && request.enableTools && request.tools.isNotEmpty() &&
             firstError.message.orEmpty().contains("HTTP 400") &&
@@ -150,8 +151,8 @@ class GeminiProvider(private val httpClient: AiHttpClient) : AiProvider {
     override suspend fun healthCheck(config: ProviderSettings): ProviderHealth {
         val started = System.currentTimeMillis()
         val base = config.resolveBaseUrl(DEFAULT_BASE_URL)
-        val url = "$base/models?key=${config.apiKey.orEmpty()}"
-        val outcome = httpClient.get(url, emptyMap(), 15)
+        val url = "$base/models"
+        val outcome = httpClient.get(url, mapOf("x-goog-api-key" to config.apiKey.orEmpty()), 15)
         val elapsed = System.currentTimeMillis() - started
         return when (outcome) {
             is Outcome.Success -> ProviderHealth(
@@ -173,6 +174,6 @@ class GeminiProvider(private val httpClient: AiHttpClient) : AiProvider {
 
     companion object {
         const val DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
-        const val DEFAULT_MODEL = "gemini-2.0-flash"
+        const val DEFAULT_MODEL = "gemini-3.8-flash"
     }
 }

@@ -26,8 +26,8 @@ class OfflineProvider : AiProvider {
             append(lastUser.take(300))
             append("\"\n\n")
             append("To restore live intelligence, open Settings → AI Providers and enable a ")
-            append("provider with a valid API key, or point JARVIS BLUE at your own ")
-            append("Ollama server over a private tunnel.")
+            append("provider with a valid API key, or configure your own ")
+            append("HTTPS-compatible endpoint.")
         }
         return AiResponse(
             content = reply,

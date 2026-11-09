@@ -72,6 +72,7 @@ interface AiProvider {
 
 @Serializable
 data class ProviderSettings(
+    val enabled: Boolean = false,
     val baseUrl: String? = null,
     val apiKey: String? = null,
     val defaultModelId: String? = null,

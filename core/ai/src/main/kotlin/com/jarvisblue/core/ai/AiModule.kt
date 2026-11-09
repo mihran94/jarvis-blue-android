@@ -25,14 +25,19 @@ class ProviderSettingsResolver @Inject constructor(
             ProviderId.OPENAI -> SecretVault.ALIAS_OPENAI
             ProviderId.GEMINI -> SecretVault.ALIAS_GEMINI
             ProviderId.MINIMAX -> SecretVault.ALIAS_MINIMAX
-            ProviderId.OLLAMA -> SecretVault.ALIAS_OLLAMA
-            ProviderId.OPENAI_COMPATIBLE -> SecretVault.ALIAS_OLLAMA
+            ProviderId.OLLAMA -> null // Kept only for reading old database values
+            ProviderId.OPENAI_COMPATIBLE -> SecretVault.ALIAS_OPENAI_COMPATIBLE
             ProviderId.OFFLINE_ECHO -> null
         }
         return ProviderSettings(
+            enabled = config?.enabled == true,
             baseUrl = config?.baseUrl,
             apiKey = keyAlias?.let { secretVault.get(it) },
-            defaultModelId = config?.defaultModelId,
+            // Upgrade only the known retired Gemini model; keep all other user choices.
+            defaultModelId = config?.defaultModelId?.let { saved ->
+                if (providerId == ProviderId.GEMINI && saved == "gemini-2.0-flash")
+                    "gemini-3.8-flash" else saved
+            },
             temperature = config?.temperature ?: 0.3,
             maxOutputTokens = config?.maxOutputTokens ?: 2048,
         )
@@ -61,10 +66,6 @@ object AiModule {
 
     @Provides
     @Singleton
-    fun provideOllamaProvider(client: AiHttpClient): OllamaProvider = OllamaProvider(client)
-
-    @Provides
-    @Singleton
     fun provideGenericProvider(client: AiHttpClient): GenericOpenAiProvider = GenericOpenAiProvider(client)
 
     @Provides
@@ -73,14 +74,12 @@ object AiModule {
         openAi: OpenAiProvider,
         gemini: GeminiProvider,
         miniMax: MiniMaxProvider,
-        ollama: OllamaProvider,
         generic: GenericOpenAiProvider,
     ): ProviderRegistry = ProviderRegistry(
         mapOf(
             ProviderId.OPENAI to openAi,
             ProviderId.GEMINI to gemini,
             ProviderId.MINIMAX to miniMax,
-            ProviderId.OLLAMA to ollama,
             ProviderId.OPENAI_COMPATIBLE to generic,
         ),
     )

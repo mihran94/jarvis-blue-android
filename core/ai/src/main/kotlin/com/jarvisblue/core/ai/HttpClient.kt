@@ -38,7 +38,7 @@ class AiHttpClient(
                 .callTimeout(timeoutSeconds.toLong(), TimeUnit.SECONDS)
                 .build()
 
-            okHttpClient.newCall(request).execute().use { response ->
+            client.newCall(request).execute().use { response ->
                 val payload = response.body?.string().orEmpty()
                 if (!response.isSuccessful) {
                     throw when (response.code) {
@@ -67,7 +67,7 @@ class AiHttpClient(
             val client = okHttpClient.newBuilder()
                 .callTimeout(timeoutSeconds.toLong(), TimeUnit.SECONDS)
                 .build()
-            okHttpClient.newCall(request).execute().use { response ->
+            client.newCall(request).execute().use { response ->
                 val payload = response.body?.string().orEmpty()
                 if (!response.isSuccessful) {
                     throw AppError.Network("HTTP ${response.code}: ${payload.take(300)}")

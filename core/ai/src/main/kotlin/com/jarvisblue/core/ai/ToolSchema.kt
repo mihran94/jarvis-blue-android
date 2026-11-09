@@ -13,7 +13,7 @@ import kotlinx.serialization.json.put
 
 /**
  * Converts the declarative [ToolSpec] into the JSON-Schema shapes the different
- * providers expect (OpenAI function schema, Gemini functionDeclarations, Ollama tools).
+ * providers expect (OpenAI function schema, Gemini functionDeclarations).
  */
 object ToolSchema {
 
@@ -40,15 +40,6 @@ object ToolSchema {
         })
     }
 
-    fun toOllamaTool(spec: ToolSpec): JsonObject = buildJsonObject {
-        put("type", "function")
-        put("function", buildJsonObject {
-            put("name", spec.name)
-            put("description", spec.description)
-            put("parameters", toJsonSchema(spec))
-        })
-    }
-
     fun toGeminiDeclaration(spec: ToolSpec): JsonObject = buildJsonObject {
         put("name", spec.name)
         put("description", spec.description)
@@ -56,9 +47,12 @@ object ToolSchema {
     }
 
     /**
-     * Gemini's functionDeclarations[].parameters is the Google Schema type,
-     * not generic OpenAI JSON Schema. Strip unknown fields recursively.
-     * Keep strict OpenAI additionalProperties validation unchanged.
+     * Gemini `functionDeclarations[].parameters` is the limited Google Schema
+     * message, NOT arbitrary JSON Schema. In particular `additionalProperties`
+     * triggers HTTP 400 at that path (even though OpenAI accepts it).
+     *
+     * Keep the internal/OpenAI schema strict and sanitize ONLY at the Gemini
+     * HTTP boundary. Recursion protects nested objects and array items too.
      */
     fun toGeminiParameters(openAiSchema: JsonObject): JsonObject = buildJsonObject {
         openAiSchema.forEach { (field, value) ->
@@ -71,11 +65,16 @@ object ToolSchema {
                         }
                     })
                 }
-                "items" -> if (value is JsonObject) put("items", toGeminiParameters(value))
+                "items" -> if (value is JsonObject) {
+                    put("items", toGeminiParameters(value))
+                }
+                // Google Schema currently does not accept these from JSON Schema.
                 "additionalProperties", "default" -> Unit
+                // maxLength is an int64 string in the Google Schema protocol.
                 "maxLength" -> put("maxLength", value.jsonPrimitive.content)
                 "description", "enum", "required", "format", "nullable",
                 "minimum", "maximum", "minItems", "maxItems" -> put(field, value)
+                // Unknown fields are deliberately not forwarded to Gemini.
             }
         }
     }

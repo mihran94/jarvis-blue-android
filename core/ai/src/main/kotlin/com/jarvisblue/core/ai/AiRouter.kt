@@ -40,20 +40,34 @@ class AiRouter(
     /** Last known health per provider, exposed for the dashboard. */
     fun cachedHealth(): Map<ProviderId, ProviderHealth> = healthCache.toMap()
 
+    fun invalidateHealth(providerId: ProviderId) { healthCache.remove(providerId) }
+
     private val providers: Map<ProviderId, AiProvider> get() = registry.providers
 
     suspend fun refreshHealth(): Map<ProviderId, ProviderHealth> {
         val results = providers.keys.associateWith { id ->
             val provider = providers.getValue(id)
             val settings = settingsProvider(id)
-            runCatching { provider.healthCheck(settings) }
-                .getOrElse {
-                    ProviderHealth(
-                        providerId = id,
-                        state = ProviderHealthState.UNAVAILABLE,
-                        detail = it.message ?: "Health check failed",
-                    )
-                }
+            if (!settings.enabled || settings.apiKey.isNullOrBlank() || !allowedCustomEndpoint(id, settings)) {
+                ProviderHealth(
+                    providerId = id,
+                    state = ProviderHealthState.UNCONFIGURED,
+                    detail = when {
+                        !settings.enabled -> "Provider is disabled"
+                        settings.apiKey.isNullOrBlank() -> "Add an API key"
+                        else -> "Custom provider requires a trusted HTTPS Base URL"
+                    },
+                )
+            } else {
+                runCatching { provider.healthCheck(settings) }
+                    .getOrElse {
+                        ProviderHealth(
+                            providerId = id,
+                            state = ProviderHealthState.UNAVAILABLE,
+                            detail = it.message ?: "Health check failed",
+                        )
+                    }
+            }
         }
         healthCache.putAll(results)
         return results
@@ -136,13 +150,18 @@ class AiRouter(
     private suspend fun providerPriority(): List<Pair<ProviderId, Int>> {
         val configured = settingsProvider
         val ids = providers.keys.toList()
-        val ranked = ids.map { id ->
+        val ranked = ids.mapNotNull { id ->
             val settings = configured(id)
-            val enabled = settings.defaultModelId != null || settings.apiKey != null
-            id to if (enabled) settings.defaultModelId.let { PRIORITY_BASE } else PRIORITY_DISABLED
+            // Only providers explicitly enabled and configured may receive requests.
+            if (settings.enabled && !settings.apiKey.isNullOrBlank() && allowedCustomEndpoint(id, settings)) {
+                id to PRIORITY_BASE
+            } else null
         }
         return ranked.sortedBy { it.second }
     }
+
+    private fun allowedCustomEndpoint(id: ProviderId, settings: ProviderSettings): Boolean =
+        id != ProviderId.OPENAI_COMPATIBLE || settings.baseUrl?.startsWith("https://", ignoreCase = true) == true
 
     data class Candidate(val provider: ProviderId, val rank: Int, val modelId: String?)
 
@@ -152,17 +171,15 @@ class AiRouter(
 
         val CODING_MODEL_PREFERENCE: Map<ProviderId, String?> = mapOf(
             ProviderId.OPENAI to "gpt-4o",
-            ProviderId.GEMINI to "gemini-2.0-flash",
+            ProviderId.GEMINI to "gemini-3.8-flash",
             ProviderId.MINIMAX to null,
-            ProviderId.OLLAMA to "qwen2.5-coder",
             ProviderId.OPENAI_COMPATIBLE to null,
         )
 
         val VISION_MODEL_PREFERENCE: Map<ProviderId, String?> = mapOf(
             ProviderId.OPENAI to "gpt-4o",
-            ProviderId.GEMINI to "gemini-2.0-flash",
+            ProviderId.GEMINI to "gemini-3.8-flash",
             ProviderId.MINIMAX to null,
-            ProviderId.OLLAMA to null,
             ProviderId.OPENAI_COMPATIBLE to null,
         )
     }

@@ -14,16 +14,17 @@ import org.junit.Test
 
 class GeminiSchemaAdapterTest {
     @Test fun preservesOpenAiSchemaButConvertsGemini() {
-        val spec = ToolSpec(
+        val tool = ToolSpec(
             name = "test_tool", description = "A safe test tool",
             parameters = listOf(
                 ToolParameter("text", ParamType.STRING, "Text", required = true, maxLength = 40),
             ),
         )
-        val openAi = ToolSchema.toJsonSchema(spec)
-        assertTrue(openAi.containsKey("additionalProperties"))
-        assertEquals("object", openAi["type"]?.jsonPrimitive?.content)
-        val gemini = ToolSchema.toGeminiDeclaration(spec)
+        val openAiParameters = ToolSchema.toJsonSchema(tool)
+        assertTrue(openAiParameters.containsKey("additionalProperties"))
+        assertEquals("object", openAiParameters["type"]?.jsonPrimitive?.content)
+
+        val gemini = ToolSchema.toGeminiDeclaration(tool)
         val parameters = gemini["parameters"] as JsonObject
         assertFalse(parameters.containsKey("additionalProperties"))
         assertEquals("OBJECT", parameters["type"]?.jsonPrimitive?.content)
@@ -40,13 +41,13 @@ class GeminiSchemaAdapterTest {
                 put("nested", buildJsonObject {
                     put("type", "object")
                     put("additionalProperties", false)
-                    put("default", "do not send")
+                    put("default", "never forwarded")
                 })
             })
         }
-        val result = ToolSchema.toGeminiParameters(schema)
-        val nested = (result["properties"] as JsonObject)["nested"] as JsonObject
-        assertFalse(result.containsKey("additionalProperties"))
+        val converted = ToolSchema.toGeminiParameters(schema)
+        val nested = (converted["properties"] as JsonObject)["nested"] as JsonObject
+        assertFalse(converted.containsKey("additionalProperties"))
         assertFalse(nested.containsKey("additionalProperties"))
         assertFalse(nested.containsKey("default"))
         assertEquals("OBJECT", nested["type"]?.jsonPrimitive?.content)

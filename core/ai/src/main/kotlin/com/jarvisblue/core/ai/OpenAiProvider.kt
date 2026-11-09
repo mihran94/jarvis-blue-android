@@ -116,7 +116,7 @@ open class OpenAiCompatibleProvider(
         )
     }
 
-    override suspend fun healthCheck(config: ProviderSettings): ProviderHealth {
+    open override suspend fun healthCheck(config: ProviderSettings): ProviderHealth {
         val started = System.currentTimeMillis()
         val base = config.resolveBaseUrl(defaultBaseUrl)
         val url = if (authStyle == AuthStyle.QUERY_PARAM_KEY) {
@@ -162,9 +162,18 @@ class MiniMaxProvider(httpClient: AiHttpClient) :
     OpenAiCompatibleProvider(
         providerId = ProviderId.MINIMAX,
         httpClient = httpClient,
-        defaultBaseUrl = DEFAULT_BASE_URL,
-        defaultModel = DEFAULT_MODEL,
+        defaultBaseUrl = "https://api.minimax.io/v1",
+        defaultModel = "MiniMax-M3.1-Flash",
+    ) {
+    // MiniMax does not document a GET /models health endpoint for this API.
+    // Do not label it unavailable without verifying with a real chat request.
+    override suspend fun healthCheck(config: ProviderSettings): ProviderHealth = ProviderHealth(
+        providerId = providerId,
+        state = ProviderHealthState.UNKNOWN,
+        detail = "Configured; send a chat to test the MiniMax connection",
+        checkedAtEpochMs = System.currentTimeMillis(),
     )
+}
 
 /** Any user-supplied OpenAI-compatible gateway (LM Studio, vLLM, OpenRouter…). */
 class GenericOpenAiProvider(httpClient: AiHttpClient) :
