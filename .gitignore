@@ -8,35 +8,25 @@ captures/
 .externalNativeBuild/
 .cxx/
 *.apk.idsr
-
-# ---- Signing material: NEVER commit ----
 *.keystore
-*.p12
-*.jks
-keystore/
+keystore/*.p12
+keystore/*.jks
+keystore/*.keystore
+keystore/keystore.properties
+keystore/keystore.properties
 
-# ---- Build outputs / binaries ----
-dist/
-*.apk
-*.aab
-
-# Broker API credentials, local environments and tokens (never commit)
+# Broker credentials -- never commit
 .env
 .env.*
 *.secret
-*.pem
-*.key
-*.p12
-*.jks
+private.pem
 exness-credentials*
-**/secrets.properties
-**/private-keys/
-.venv/
-__pycache__/
-*.pyc
 
-# GitHub Releases should publish APK artifacts, not commit them
+# GitHub Releases: do not commit build artifacts or credentials
+dist/
 *.apk
 *.aab
-dist/
-release-output/
+.venv/
+__pycache__/
+*.pem
+keystore/

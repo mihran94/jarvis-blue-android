@@ -1,0 +1,7 @@
+JARVIS BLUE MOBILE v1.1.5 — Gold Core Tests
+
+Pure Kotlin GoldSignalEngine compilation: SUCCESS (OpenJDK 21, local Kotlin compiler).
+12/12 engine behavior checks: PASS.
+Includes BUY / SELL / WAIT, TP/Stop/Exit ordering, timestamp order, CSV parsing and risk limits.
+NOT run: Android Gradle build, Android instrumentation tests, live Twelve Data API integration, device startup / Play Protect review.
+Synthetic test fixtures are not market backtests; no profitability/win-rate estimate.

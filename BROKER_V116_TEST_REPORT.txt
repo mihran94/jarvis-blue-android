@@ -1,0 +1,10 @@
+JARVIS BLUE MOBILE v1.1.6 local checks (2026-11-09)
+Python Exness security tests: 8/8 PASS (mocked, no network)
+Kotlin gold institutional engine: compiled with kotlinc; harness PASS
+Android APK build: NOT RUN (Android SDK unavailable in this runtime)
+Live Exness authentication: NOT RUN (no user keys provided)
+Broker trading routes: NONE (GET only)
+Windows Bridge authenticated route: added, NOT integration-tested with phone
+Institutional structure: swing/BOS/sweep/FVG price-action proxy ONLY
+Gold quotes source: still Twelve Data/manual CSV; Exness candles not integrated
+Secrets: no private key added

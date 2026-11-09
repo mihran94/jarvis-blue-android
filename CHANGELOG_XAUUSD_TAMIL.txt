@@ -1,0 +1,37 @@
+JARVIS BLUE MOBILE v1.1.0 — XAU/USD Forex Gold Intelligence
+============================================================
+
+NEW MODULE: Studio -> Gold
+- Twelve Data XAU/USD OHLC (manual API-key-powered refresh)
+- 15min, 1h, 4h, 1day timeframes
+- Manual CSV OHLC import, timestamp ordered, 60-1500 candles
+- Rule-based BUY WATCH / SELL WATCH / WAIT analysis
+- EMA 20/50, Wilder RSI14, MACD histogram, Wilder ATR14
+- Recent 30-bar support/resistance, chart, explanatory reasons
+- Illustrative ATR stop/target (2:1 theoretical RR)
+- Risk sizing in troy ounces (not broker lots), cap 2% input
+- Three marked synthetic demos (BUY, SELL, WAIT)
+- Source code unit tests and verification smoke checks
+
+SAFETY
+- No order execution, no brokerage login, no auto-trading
+- No hard-coded market prices or guaranteed returns
+- No API key persisted; secure network HTTPS calls; no request URL logging
+- Sensitive signing keystore excluded from ZIP
+- Play Protect warning and prior startup crash are not certified fixed
+
+VALIDATION PERFORMED HERE
+- Pure Kotlin GoldSignalEngine: compiler SUCCESS
+- Synthetic BUY / SELL / WAIT regression checks: PASS
+- CSV/risk-input/flat-data smoke checks: PASS
+- Complete Android APK build: NOT POSSIBLE in current runtime (no Android SDK)
+- Test on physical phone: NOT PERFORMED
+
+WINDOWS BUILD
+1. Extract ZIP
+2. Run BUILD_DEBUG_WINDOWS.cmd
+3. BUILD SUCCESSFUL -> app\build\outputs\apk\debug\app-debug.apk
+4. Run INSTALL_DEBUG_USB.cmd (standard ADB install; Play Protect still active)
+5. On startup crash: CAPTURE_CRASH_WINDOWS.cmd; upload resulting log
+
+READ: docs\GOLD_XAUUSD_TAMIL.md
