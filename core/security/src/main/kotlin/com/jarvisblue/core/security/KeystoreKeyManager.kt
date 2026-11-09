@@ -89,16 +89,19 @@ class KeystoreKeyManager(
         return builder.build()
     }
 
-    fun newInitVector(): ByteArray =
-        ByteArray(GCM_IV_LENGTH).also { java.security.SecureRandom().nextBytes(it) }
-
-    fun cipherForEncryption(iv: ByteArray): Cipher =
+    /**
+     * AndroidKeyStore AES-GCM keys with randomized encryption required must
+     * generate their own IV. The caller MUST persist cipher.iv alongside the
+     * ciphertext and supply it only when decrypting.
+     */
+    fun cipherForEncryption(): Cipher =
         Cipher.getInstance(TRANSFORMATION).apply {
-            init(Cipher.ENCRYPT_MODE, getOrCreateKey(), GCMParameterSpec(GCM_TAG_BITS, iv))
+            init(Cipher.ENCRYPT_MODE, getOrCreateKey())
         }
 
     fun cipherForDecryption(iv: ByteArray): Cipher =
         Cipher.getInstance(TRANSFORMATION).apply {
+            require(iv.size == GCM_IV_LENGTH) { "Invalid AES-GCM IV length" }
             init(Cipher.DECRYPT_MODE, getOrCreateKey(), GCMParameterSpec(GCM_TAG_BITS, iv))
         }
 

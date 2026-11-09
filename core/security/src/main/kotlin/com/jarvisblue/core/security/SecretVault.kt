@@ -57,6 +57,8 @@ class SecretVault(
         const val ALIAS_OPENAI = "openai_api_key"
         const val ALIAS_GEMINI = "gemini_api_key"
         const val ALIAS_MINIMAX = "minimax_api_key"
+        const val ALIAS_OPENAI_COMPATIBLE = "compatible_api_key"
+        @Deprecated("Legacy stored secret; not reused for other providers")
         const val ALIAS_OLLAMA = "ollama_api_key"
         const val ALIAS_WINDOWS_PEER = "windows_peer_secret"
     }

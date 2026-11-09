@@ -6,8 +6,9 @@ import kotlinx.serialization.Serializable
 enum class ProviderId(val displayName: String, val supportsTools: Boolean, val supportsImages: Boolean) {
     OPENAI("OpenAI", true, true),
     GEMINI("Gemini", true, true),
-    MINIMAX("minimax", true, true),
-    OLLAMA("Ollama (self-hosted)", true, false),
+    MINIMAX("MiniMax", true, true),
+    @Deprecated("Legacy database value; Ollama was removed from the mobile client")
+    OLLAMA("Ollama (legacy, removed)", false, false),
     OPENAI_COMPATIBLE("OpenAI-compatible endpoint", true, false),
     OFFLINE_ECHO("Built-in offline fallback", false, false),
 }
