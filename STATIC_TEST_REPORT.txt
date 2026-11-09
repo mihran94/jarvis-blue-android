@@ -1,0 +1,22 @@
+JARVIS BLUE MOBILE v1.1.5 XAU/USD static review
+============================================
+
+GoldSignalEngine.kt was compiled with locally available Kotlin compiler.
+12 direct Kotlin engine checks PASSED:
+- strong BUY and SELL 4/4 strict gating
+- ordered close/stop/target levels in both directions
+- unconfirmed breakout -> WAIT
+- flat market -> WAIT
+- too few completed candles rejected
+- inconsistent OHLC rejected
+- unsorted timestamp rejected
+- position-size formula
+- excessive risk rejected
+- legacy target alias equals TP2
+
+NOT VERIFIED:
+- Entire Android APK compilation
+- Actual Android phone launch
+- Market API access/freshness on a real endpoint
+- Profitability/backtests or out-of-sample performance
+- Play Protect warning remediation
