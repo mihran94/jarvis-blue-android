@@ -1,0 +1,11 @@
+JARVIS BLUE MOBILE v1.1.8 — Local offline verification
+Kotlin ToolSchema compilation with model/JSON test stubs: PASS
+Gemini Schema conversion nested/root tests: PASS
+Android Manifest XML and package visibility: PASS
+Additional source/static/security regression checks: 14/14 PASS
+Gradle/Android APK build: NOT COMPLETED (Gradle distribution unavailable: UnknownHostException).
+Samsung Android 12 runtime / speech recognizer: NOT TESTED.
+Gemini API live requests: NOT TESTED.
+GitHub Actions: NOT EXECUTED by this fix branch.
+GitHub source fix branch contains selective edits against old main; full v1.1.8 ZIP supplied separately.
+No trading orders or device actions performed.

@@ -1,0 +1,16 @@
+JARVIS BLUE MOBILE v1.1.7 — LOCAL VERIFICATION REPORT
+
+Completed on 2026-11-09:
+- Compiled pure GoldSignalEngine + InstitutionalStructureEngine + GoldMultiTimeframeGate with local Kotlin compiler 1.9.0.
+- 14/14 deterministic standalone Kotlin assertions PASS: baseline buy/sell, timeframe mapping, missing and duplicate context, contradictory context, matching context, no invented SL/TP levels, daily gating, primary WAIT stays WAIT.
+- Existing Windows Exness connector Python unit tests: 8/8 PASS (offline mocks only).
+- Staged project source files verified; no live broker orders, no broker keys bundled, and signing keystores excluded.
+
+NOT VERIFIED:
+- Android/Gradle APK compilation in this runtime (Android SDK not installed here).
+- Android 12 device startup / live mobile UI.
+- Twelve Data live XAU/USD access or subscription quota.
+- Exness HTTP 403 resolution; Exness remains optional and disconnected.
+- Real-money profitability or historical backtesting.
+
+Install from your own trusted Windows build only after security review. Do not bypass Play Protect warnings.

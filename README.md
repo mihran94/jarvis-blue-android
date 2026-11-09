@@ -1,10 +1,56 @@
+# JARVIS BLUE MOBILE v1.1.9 — responsive UI + opt-in update checks
+
+See [Tamil v1.1.9 release notes](V119_RESPONSIVE_AUTO_UPDATES_TAMIL.md).
+
+**Development source only — no verified Android APK release.**
+
+## v1.1.6 — Exness read-only integration and institutional-style structure
+
+See [EXNESS_SETUP_TAMIL.md](EXNESS_SETUP_TAMIL.md). No live orders, no Android APK compiled, no broker secrets included.
+
+# JARVIS BLUE MOBILE v1.1.5 — STRONG XAU/USD Research Update
+
+**NEW:** Studio → Gold now supports strictly gated STRONG BUY / STRONG SELL / WAIT, reference Entry, candle-close Exit, protective Stop Loss, TP1 and TP2. See `docs/GOLD_XAUUSD_TAMIL.md` and `GOLD_V115_CHANGELOG_TAMIL.md`.
+
+**IMPORTANT:** Not an AI prediction, not live quotes without your API key, not auto-trading. Play Protect checks must not be bypassed. Android build has not been verified in this environment.
+
+# JARVIS BLUE MOBILE 1.1.4 — Friendly UI refresh
+
+**New:** Midnight Blue + Cyan Home dashboard, one-tap shortcuts to actual Chat / Studio → Gold / Windows Control / Voice screens, expandable friendly Settings, encrypted-key input, hidden advanced provider options, persisted Dark/Light appearance, confirmation before destructive data actions. Ollama remains removed from mobile. The v1.1.3 in-app update module is preserved inside **Settings → App updates & about**.
+
+**Build status:** source-only package. This environment does not have a complete Android SDK/Gradle build toolchain. Run `BUILD_DEBUG_WINDOWS.cmd` with JDK 17 / Android SDK 35 on your own PC; inspect Play Protect warnings rather than bypassing them. The app has NOT been installed or runtime-tested from this version. Read `UI_REFRESH_TAMIL.md`.
+
+**Safe upgrade:** v1.1.3 → v1.1.4 debug APK retains `com.jarvisblue.mobile.debug` and needs the SAME debug signing certificate to preserve app data. Do not uninstall a working copy as a first troubleshooting step. A release build needs your private release keystore and must retain the existing signer to update it. No private release keystore or API keys are included here.
+
+---
+
+**Update v1.1.3 — In-app updater:** Settings → App updates. Enter your trusted HTTPS update feed URL once, then check/download/verify/install from inside the app with Android user confirmation. This is a source-only, sideload-oriented build. See [IN_APP_UPDATES_TAMIL.md](IN_APP_UPDATES_TAMIL.md).
+
+**Update v1.1.2:** See `PROVIDER_REFRESH_README_TAMIL.md` for current provider setup. Ollama support has been removed from this Android build; older sections below describe the original 1.1.0 release and may be outdated.
+
 # JARVIS BLUE MOBILE
+
+**Important:** This is modified SOURCE, not a compiled/tested APK. Android startup crash and earlier Play Protect concerns are not proven resolved. Build and test on your own device.
 
 **A private, voice-controlled Android AI assistant that can actually do things on
 your phone — under a permission and risk gate you control.**
 
 Kotlin · Jetpack Compose · Clean Architecture · Room + SQLCipher · Android Keystore ·
-OpenAI / Gemini / minimax / Ollama · Tamil, English, French · **minSdk 31 (Android 12)**
+OpenAI / Gemini / MiniMax · Tamil, English, French · **minSdk 31 (Android 12)**
+
+---
+
+## NEW — XAU/USD Gold Intelligence (research only)
+
+Open **Studio → Gold** for XAU/USD analysis with EMA20/50, RSI14, MACD, ATR14,
+recent support/resistance, BUY WATCH / SELL WATCH / WAIT, illustrative ATR
+stops/targets, and risk-sizing in troy ounces. Use your own Twelve Data key
+for manual live-data refresh or paste CSV candle data. Three explicitly
+synthetic BUY/SELL/WAIT demonstrations are included.
+
+**No automatic trading, broker order placement, guaranteed outcomes or
+unverified machine-learning price predictions.**
+See [`docs/GOLD_XAUUSD_TAMIL.md`](docs/GOLD_XAUUSD_TAMIL.md).
 
 ---
 
@@ -25,19 +71,16 @@ it matters. The AI can *request* an action; it can never perform one.
 ## Quick start
 
 ```bash
-# 0. After a fresh clone (see docs/BUILD.md §0)
-bash gradle/wrapper/restore-wrapper.sh && chmod +x gradlew
-
 # 1. Toolchain: JDK 17 + Android SDK 35 (see docs/BUILD.md)
 export ANDROID_HOME="$HOME/Android/sdk"
 echo "sdk.dir=$ANDROID_HOME" > local.properties
 
 # 2. Build
 ./gradlew :app:assembleDebug        # app/build/outputs/apk/debug/app-debug.apk
-./gradlew :app:assembleRelease      # app/build/outputs/apk/release/app-release.apk
+./gradlew :app:assembleRelease      # requires private release keystore
 
 # 3. Install
-adb install -r app/build/outputs/apk/release/app-release.apk
+adb install -r app/build/outputs/apk/debug/app-debug.apk  # same debug signing key required
 ```
 
 Then open the app, go to **Settings → AI providers**, paste an API key, and

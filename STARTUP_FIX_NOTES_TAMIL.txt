@@ -1,0 +1,21 @@
+JARVIS BLUE MOBILE - Startup repair source patch
+
+Changes:
+1. Avoid eager encrypted database and optional tool dependency creation during Application injection by injecting Dagger Lazy providers. Tool registration errors are logged without terminating the app.
+2. Do not manually force WorkManager at startup; its existing Configuration.Provider and deferred initialization remain in place.
+3. Fix repeated Activity.recreate() loop when the app-lock session has expired.
+4. Make microphone permission state observable by Compose.
+5. Handle TTS initialization exceptions without an uncaught ViewModel coroutine failure.
+6. Remove duplicate androidx.hilt.work dependencies.
+
+IMPORTANT: The exact cause of the user's crash has NOT been confirmed without logcat. These are source-level stability fixes, not a verified solution to the reported device crash.
+
+Windows instructions:
+- Extract this project in a NEW folder. Keep old project as backup.
+- Run BUILD_DEBUG_WINDOWS.cmd from inside the extracted project.
+- If the build passes, test the new debug APK from app\build\outputs\apk\debug\app-debug.apk.
+- INSTALL_DEBUG_USB.cmd performs a normal ADB install with confirmation; it never bypasses Play Protect.
+- Do not disable Google Play Protect; its prior sensitive-data warning is unresolved.
+- Capture any remaining crash with CAPTURE_CRASH_WINDOWS.cmd and share jarvis-crash.txt, after redacting personal data.
+
+SECURITY: Original release keystore and signing passwords and prebuilt release APK are excluded from the patched ZIP.
