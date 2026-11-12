@@ -92,9 +92,10 @@ class KeystoreKeyManager(
     fun newInitVector(): ByteArray =
         ByteArray(GCM_IV_LENGTH).also { java.security.SecureRandom().nextBytes(it) }
 
-    fun cipherForEncryption(iv: ByteArray): Cipher =
+    /** Android Keystore must generate the IV when randomized encryption is required. */
+    fun cipherForEncryption(): Cipher =
         Cipher.getInstance(TRANSFORMATION).apply {
-            init(Cipher.ENCRYPT_MODE, getOrCreateKey(), GCMParameterSpec(GCM_TAG_BITS, iv))
+            init(Cipher.ENCRYPT_MODE, getOrCreateKey())
         }
 
     fun cipherForDecryption(iv: ByteArray): Cipher =

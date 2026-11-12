@@ -12,8 +12,8 @@ import java.security.SecureRandom
 class CipherBox(private val keyManager: KeystoreKeyManager = KeystoreKeyManager()) {
 
     fun encrypt(plain: ByteArray): String {
-        val iv = keyManager.newInitVector()
-        val cipher = keyManager.cipherForEncryption(iv)
+        val cipher = keyManager.cipherForEncryption()
+        val iv = cipher.iv
         val combined = cipher.doFinal(plain)
         val cipherText = combined.copyOfRange(0, combined.size - TAG_LENGTH)
         val tag = combined.copyOfRange(combined.size - TAG_LENGTH, combined.size)

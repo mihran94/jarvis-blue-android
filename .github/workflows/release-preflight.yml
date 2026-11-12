@@ -8,12 +8,16 @@ on:
       - 'scripts/create_update_manifest.py'
       - 'tests/test_update_manifest.py'
       - 'app/build.gradle.kts'
+      - 'app/src/diagnostic/AndroidManifest.xml'
+      - 'tests/test_diagnostic_manifest.py'
   pull_request:
     paths:
       - '.github/workflows/**'
       - 'scripts/create_update_manifest.py'
       - 'tests/test_update_manifest.py'
       - 'app/build.gradle.kts'
+      - 'app/src/diagnostic/AndroidManifest.xml'
+      - 'tests/test_diagnostic_manifest.py'
   workflow_dispatch:
 
 permissions:
@@ -27,6 +31,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Test update manifest format and SHA-256
         run: python3 -m unittest discover -s tests -p 'test_update_manifest.py' -v
+      - name: Test diagnostic manifest isolation
+        run: python3 -m unittest discover -s tests -p 'test_diagnostic_manifest.py' -v
       - name: Assert signing files and API secrets were not committed
         shell: bash
         run: |

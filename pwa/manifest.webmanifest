@@ -1,0 +1,10 @@
+{
+  "name": "JARVIS BLUE",
+  "short_name": "JARVIS",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#07142c",
+  "theme_color": "#07142c",
+  "description": "JARVIS BLUE iPhone AI assistant prototype"
+}
