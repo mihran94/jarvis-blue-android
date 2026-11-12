@@ -59,6 +59,7 @@ fun GeminiLiveRoute(onRequestMicrophone: () -> Unit, microphoneGranted: Boolean)
     DisposableEffect(Unit) { onDispose { session?.close() } }
     var showConnectionSettings by remember { mutableStateOf(false) }
     var showCamera by remember { mutableStateOf(false) }
+    var showUpdates by remember { mutableStateOf(false) }
     val connected = session != null
     val blue = Color(0xFF4B8DFF)
     Column(
@@ -193,6 +194,10 @@ fun GeminiLiveRoute(onRequestMicrophone: () -> Unit, microphoneGranted: Boolean)
                 }, enabled = apiKey.isNotBlank()) { Text("Save API key") }
             }
         }
+        TextButton(onClick = { showUpdates = !showUpdates }) {
+            Text(if (showUpdates) "Hide app updates" else "Check app updates")
+        }
+        if (showUpdates) JarvisUpdatePanel()
         Text(
             "Your microphone is used only during an active Live session. " +
                 "PC commands and wake-word activation are not yet enabled here.",
