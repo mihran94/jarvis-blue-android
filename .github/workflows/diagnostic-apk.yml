@@ -59,6 +59,9 @@ jobs:
             echo "Unexpected sensitive service in diagnostic APK" >&2
             exit 1
           fi
+          APKSIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          "$APKSIGNER" verify --verbose --print-certs "$APK" | tee diagnostic-signing.txt
+          grep -q 'Verifies' diagnostic-signing.txt
           sha256sum "$APK" | tee diagnostic-apk.sha256
       - name: Upload audit reports only
         uses: actions/upload-artifact@v4
@@ -68,4 +71,5 @@ jobs:
             diagnostic-permissions.txt
             diagnostic-manifest.txt
             diagnostic-apk.sha256
+            diagnostic-signing.txt
           retention-days: 14
