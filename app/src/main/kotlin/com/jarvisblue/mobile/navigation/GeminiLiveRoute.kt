@@ -10,6 +10,17 @@ import android.media.MediaRecorder
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.CallEnd
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Icon
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -38,45 +49,112 @@ fun GeminiLiveRoute(onRequestMicrophone: () -> Unit, microphoneGranted: Boolean)
     var status by remember { mutableStateOf("Disconnected") }
     var session by remember { mutableStateOf<GeminiLiveAudioSession?>(null) }
     DisposableEffect(Unit) { onDispose { session?.close() } }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text("JARVIS BLUE", style = MaterialTheme.typography.headlineMedium)
-        Text("Gemini Live • Natural voice conversation")
-        Text(status, color = MaterialTheme.colorScheme.primary)
-        if (session == null) {
-            OutlinedTextField(
-                value = token, onValueChange = { token = it.trim() },
-                label = { Text("Short-lived Gemini Live token") },
-                supportingText = { Text("Obtain from your own authenticated token server. Never paste a permanent API key.") },
-                modifier = Modifier.fillMaxWidth(), singleLine = true,
+    var showConnectionSettings by remember { mutableStateOf(false) }
+    val connected = session != null
+    val blue = Color(0xFF4B8DFF)
+    Column(
+        Modifier.fillMaxSize()
+            .background(Brush.verticalGradient(listOf(Color(0xFF091429), Color(0xFF101E3C), Color(0xFF091429))))
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(18.dp),
+    ) {
+        Text("JARVIS BLUE", color = Color.White, style = MaterialTheme.typography.headlineMedium)
+        Text("Your personal AI companion", color = Color(0xFFB5C6E8))
+        Spacer(Modifier.height(24.dp))
+        Box(
+            Modifier.size(210.dp)
+                .background(Brush.radialGradient(
+                    listOf(if (connected) Color(0xFF41D6F3) else blue, Color(0xFF172C58), Color(0xFF0B1830))),
+                    CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = if (connected) Icons.Filled.Mic else Icons.Filled.Mic,
+                contentDescription = if (connected) "Live microphone" else "Start conversation",
+                modifier = Modifier.size(64.dp),
+                tint = Color.White,
             )
-            Button(onClick = {
-                if (!microphoneGranted ||
-                    ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                    onRequestMicrophone()
-                    status = "Allow microphone, then tap Connect again"
-                } else if (token.isBlank()) {
-                    status = "A short-lived Live token is required"
-                } else {
-                    val live = GeminiLiveAudioSession(
-                        token = token,
-                        onStatus = { status = it },
-                    )
-                    session = live
-                    token = ""
-                    live.connect()
-                }
-            }, modifier = Modifier.fillMaxWidth()) { Text("Connect & start talking") }
-        } else {
-            Text("Microphone is active only during this session. Tap End to stop.")
-            Button(onClick = {
-                session?.close()
-                session = null
-                status = "Disconnected"
-            }, modifier = Modifier.fillMaxWidth()) { Text("End voice conversation") }
         }
-        Text("Speak naturally in Tamil or English. Gemini Live can respond with streaming audio. " +
-            "PC commands are not enabled in this voice session.")
+        Text(
+            if (connected) "I'm listening…" else "Hey! Ready when you are.",
+            style = MaterialTheme.typography.headlineSmall, color = Color.White,
+        )
+        Text(
+            status,
+            color = if (connected) Color(0xFF79E3D4) else Color(0xFFB5C6E8),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Text(
+            if (connected) "Speak naturally. You can interrupt me anytime."
+            else "Talk with me in Tamil or English.",
+            color = Color(0xFFB5C6E8),
+        )
+        Spacer(Modifier.height(8.dp))
+        if (!connected) {
+            Button(
+                onClick = {
+                    if (!microphoneGranted ||
+                        ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                        onRequestMicrophone()
+                        status = "Allow microphone, then tap Start again"
+                    } else if (token.isBlank()) {
+                        showConnectionSettings = true
+                        status = "Set up a short-lived Gemini Live token first"
+                    } else {
+                        val live = GeminiLiveAudioSession(token = token, onStatus = { status = it })
+                        session = live
+                        token = ""
+                        live.connect()
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = blue),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(18.dp),
+            ) {
+                Icon(Icons.Filled.Mic, contentDescription = null)
+                Spacer(Modifier.width(10.dp))
+                Text(if (!microphoneGranted) "Allow microphone" else "Start conversation")
+            }
+        } else {
+            Button(
+                onClick = {
+                    session?.close()
+                    session = null
+                    status = "Disconnected"
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFBC4056)),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(18.dp),
+            ) {
+                Icon(Icons.Filled.CallEnd, contentDescription = null)
+                Spacer(Modifier.width(10.dp))
+                Text("End conversation")
+            }
+        }
+        if (!connected) {
+            TextButton(onClick = { showConnectionSettings = !showConnectionSettings }) {
+                Icon(Icons.Filled.Settings, contentDescription = null, tint = Color(0xFFB5C6E8))
+                Spacer(Modifier.width(8.dp))
+                Text("Connection setup", color = Color(0xFFB5C6E8))
+            }
+            if (showConnectionSettings) {
+                OutlinedTextField(
+                    value = token, onValueChange = { token = it.trim() },
+                    label = { Text("Short-lived Gemini Live token") },
+                    supportingText = { Text("Use a token from your authenticated server, not a permanent API key.") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                )
+            }
+        }
+        Text(
+            "Your microphone is used only during an active Live session. " +
+                "PC commands and wake-word activation are not yet enabled here.",
+            style = MaterialTheme.typography.bodySmall, color = Color(0xFF92A5C7),
+        )
     }
 }
 
