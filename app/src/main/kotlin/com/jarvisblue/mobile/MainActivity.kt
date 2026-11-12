@@ -37,7 +37,7 @@ class MainActivity : FragmentActivity() {
         microphonePermissionGranted = granted
     }
 
-    private var microphonePermissionGranted = false
+    private var microphonePermissionGranted by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
