@@ -13,9 +13,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assistant
-import androidx.compose.material.icons.filled.Chat
-import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -23,13 +22,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -41,20 +37,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.jarvisblue.core.security.EmergencyStop
-import com.jarvisblue.core.ui.components.GlowCard
 import com.jarvisblue.core.ui.components.JarvisOrb
-import com.jarvisblue.core.ui.components.StatusPill
-import com.jarvisblue.core.ui.theme.BlueCore
-import com.jarvisblue.core.ui.theme.CyanAccent
 import com.jarvisblue.core.ui.theme.RedCritical
 import com.jarvisblue.feature.assistant.AssistantRoute
 import com.jarvisblue.feature.chat.ChatRoute
-import com.jarvisblue.feature.command.MemoryRoute
-import com.jarvisblue.feature.command.PermissionsRoute
 import com.jarvisblue.feature.command.SettingsRoute
-import com.jarvisblue.feature.command.TasksRoute
 import com.jarvisblue.feature.command.WindowsRoute
-import com.jarvisblue.feature.studio.StudioRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
@@ -70,8 +58,7 @@ private enum class JarvisTab(
 ) {
     ASSISTANT("Assistant", Icons.Filled.Assistant),
     CHAT("Chat", Icons.Filled.Chat),
-    STUDIO("Studio", Icons.Filled.Code),
-    CONTROL("Control", Icons.Filled.Dashboard),
+    PC("PC Control", Icons.Filled.Dashboard),
     SETTINGS("Settings", Icons.Filled.Settings),
 }
 
@@ -128,8 +115,7 @@ fun JarvisApp(
                     microphoneGranted = microphoneGranted,
                 )
                 JarvisTab.CHAT -> ChatRoute()
-                JarvisTab.STUDIO -> StudioRoute()
-                JarvisTab.CONTROL -> ControlCenterScreen()
+                JarvisTab.PC -> WindowsRoute()
                 JarvisTab.SETTINGS -> SettingsRoute()
             }
 
@@ -165,32 +151,6 @@ private fun EmergencyBanner(reason: String?, onRelease: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Button(onClick = onRelease) { Text("Release the stop") }
-        }
-    }
-}
-
-/**
- * The control centre groups the permission dashboard, the task queue, the
- * memory manager and the Windows link behind one tab bar.
- */
-@Composable
-private fun ControlCenterScreen() {
-    var tab by remember { mutableIntStateOf(0) }
-    Column(modifier = Modifier.fillMaxSize()) {
-        TabRow(selectedTabIndex = tab) {
-            listOf("Permissions", "Tasks", "Memory", "Windows").forEachIndexed { index, label ->
-                Tab(
-                    selected = tab == index,
-                    onClick = { tab = index },
-                    text = { Text(label, style = MaterialTheme.typography.labelSmall) },
-                )
-            }
-        }
-        when (tab) {
-            0 -> PermissionsRoute()
-            1 -> TasksRoute()
-            2 -> MemoryRoute()
-            else -> WindowsRoute()
         }
     }
 }
