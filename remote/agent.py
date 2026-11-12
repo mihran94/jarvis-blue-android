@@ -15,6 +15,7 @@ import threading
 import time
 import urllib.parse
 import webbrowser
+import re
 
 ROOT = Path(__file__).resolve().parent.parent / "pwa"
 HOST = "127.0.0.1"
@@ -24,7 +25,49 @@ MAX_BODY = 4096
 LOCK = threading.Lock()
 LAST_REQUEST = {}
 
-def perform(command):
+def installed_shortcuts():
+    """Discover user and machine Start Menu shortcuts without executing arbitrary paths."""
+    bases = [
+        Path(os.environ.get("APPDATA", "")) / "Microsoft/Windows/Start Menu/Programs",
+        Path(os.environ.get("PROGRAMDATA", "")) / "Microsoft/Windows/Start Menu/Programs",
+    ]
+    found = {}
+    for base in bases:
+        if not base.is_dir():
+            continue
+        for shortcut in base.rglob("*.lnk"):
+            if not shortcut.is_file():
+                continue
+            label = shortcut.stem.strip()
+            key = label.casefold()
+            if key and key not in found:
+                found[key] = (label, shortcut)
+    return found
+
+def open_installed_app(name):
+    if not isinstance(name, str) or not 1 <= len(name) <= 80:
+        raise ValueError("Enter a valid application name")
+    if not re.fullmatch(r"[\\w .+()&-]+", name, flags=re.UNICODE):
+        raise ValueError("Invalid application name")
+    catalog = installed_shortcuts()
+    query = name.casefold().strip()
+    # Exact name first; then offer suggestions rather than guessing a program.
+    match = catalog.get(query)
+    if match is None:
+        candidates = [entry for key, entry in catalog.items() if query in key]
+        if len(candidates) == 1:
+            match = candidates[0]
+        elif candidates:
+            raise ValueError("Multiple matches: " + ", ".join(label for label, _ in candidates[:8]))
+        else:
+            raise ValueError("App not found in Windows Start Menu: " + name)
+    label, shortcut = match
+    os.startfile(str(shortcut))
+    return "Opened " + label
+
+def perform(command, app_name=None):
+    if command == "open-app":
+        return open_installed_app(app_name)
     if command == "status":
         return "Windows agent online. Computer: " + os.environ.get("COMPUTERNAME", "Windows")
     if command == "chrome":
@@ -99,7 +142,7 @@ class Handler(BaseHTTPRequestHandler):
                 if now - last < 1.0:
                     return self._reply(429, {"error": "Please wait before sending another command"})
                 LAST_REQUEST[auth] = now
-            result = perform(command)
+            result = perform(command, data.get("app"))
             return self._reply(200, {"ok": True, "result": result})
         except (ValueError, RuntimeError, OSError) as exc:
             return self._reply(400, {"error": str(exc)})
