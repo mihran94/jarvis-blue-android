@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.CallEnd
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material3.Icon
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -57,6 +58,7 @@ fun GeminiLiveRoute(onRequestMicrophone: () -> Unit, microphoneGranted: Boolean)
     var session by remember { mutableStateOf<GeminiLiveAudioSession?>(null) }
     DisposableEffect(Unit) { onDispose { session?.close() } }
     var showConnectionSettings by remember { mutableStateOf(false) }
+    var showCamera by remember { mutableStateOf(false) }
     val connected = session != null
     val blue = Color(0xFF4B8DFF)
     Column(
@@ -143,6 +145,25 @@ fun GeminiLiveRoute(onRequestMicrophone: () -> Unit, microphoneGranted: Boolean)
                 Spacer(Modifier.width(10.dp))
                 Text("End conversation")
             }
+        }
+        OutlinedButton(
+            onClick = { showCamera = !showCamera },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Icon(Icons.Filled.CameraAlt, contentDescription = null)
+            Spacer(Modifier.width(10.dp))
+            Text(if (showCamera) "Hide camera" else "Camera • Live & Photo")
+        }
+        if (showCamera) {
+            JarvisCameraPanel(
+                liveEnabled = connected,
+                onFrame = { jpeg -> session?.sendVideoFrame(jpeg) },
+                onPhoto = { jpeg ->
+                    val key = vault.get(SecretVault.ALIAS_GEMINI)
+                        ?: error("Save your Gemini API key in Connection setup first")
+                    analyzeGeminiPhoto(key, jpeg)
+                },
+            )
         }
         if (!connected) {
             TextButton(onClick = { showConnectionSettings = !showConnectionSettings }) {
@@ -288,6 +309,13 @@ private class GeminiLiveAudioSession(
             status("Microphone error: ${e.message}")
             close()
         }
+    }
+
+    fun sendVideoFrame(jpegBase64: String) {
+        if (!running.get()) return
+        val frame = JSONObject().put("realtimeInput", JSONObject().put("video", JSONObject()
+            .put("mimeType", "image/jpeg").put("data", jpegBase64)))
+        socket?.send(frame.toString())
     }
 
     fun close() {
