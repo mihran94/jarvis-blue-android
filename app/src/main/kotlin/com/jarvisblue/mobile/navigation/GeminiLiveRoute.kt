@@ -1,5 +1,8 @@
 package com.jarvisblue.mobile.navigation
 
+import com.jarvisblue.core.security.SecretVault
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import android.Manifest
 import android.content.pm.PackageManager
 import android.media.AudioAttributes
@@ -39,13 +42,17 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Explicitly started Gemini Live native-audio session.
- * Requires a short-lived, server-minted Gemini Live ephemeral token.
- * No long-lived Gemini API key is shipped in the APK or persisted here.
+ * Personal-use direct Gemini API key is encrypted at rest with Android Keystore.
+ * For production distribution use a backend and short-lived tokens instead.
  */
 @Composable
 fun GeminiLiveRoute(onRequestMicrophone: () -> Unit, microphoneGranted: Boolean) {
     val context = LocalContext.current
-    var token by remember { mutableStateOf("") }
+    val vault = remember(context) { SecretVault(context.applicationContext) }
+    val scope = rememberCoroutineScope()
+    var apiKey by remember { mutableStateOf("") }
+    var hasSavedKey by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { hasSavedKey = vault.has(SecretVault.ALIAS_GEMINI) }
     var status by remember { mutableStateOf("Disconnected") }
     var session by remember { mutableStateOf<GeminiLiveAudioSession?>(null) }
     DisposableEffect(Unit) { onDispose { session?.close() } }
@@ -99,14 +106,18 @@ fun GeminiLiveRoute(onRequestMicrophone: () -> Unit, microphoneGranted: Boolean)
                         ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                         onRequestMicrophone()
                         status = "Allow microphone, then tap Start again"
-                    } else if (token.isBlank()) {
-                        showConnectionSettings = true
-                        status = "Set up a short-lived Gemini Live token first"
                     } else {
-                        val live = GeminiLiveAudioSession(token = token, onStatus = { status = it })
-                        session = live
-                        token = ""
-                        live.connect()
+                        scope.launch {
+                            val key = vault.get(SecretVault.ALIAS_GEMINI)
+                            if (key.isNullOrBlank()) {
+                                showConnectionSettings = true
+                                status = "Enter your Gemini API key once in Settings"
+                            } else {
+                                val live = GeminiLiveAudioSession(apiKey = key, onStatus = { status = it })
+                                session = live
+                                live.connect()
+                            }
+                        }
                     }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = blue),
@@ -141,13 +152,24 @@ fun GeminiLiveRoute(onRequestMicrophone: () -> Unit, microphoneGranted: Boolean)
             }
             if (showConnectionSettings) {
                 OutlinedTextField(
-                    value = token, onValueChange = { token = it.trim() },
-                    label = { Text("Short-lived Gemini Live token") },
-                    supportingText = { Text("Use a token from your authenticated server, not a permanent API key.") },
+                    value = apiKey, onValueChange = { apiKey = it.trim() },
+                    label = { Text("Gemini API Key") },
+                    supportingText = { Text(if (hasSavedKey) "API key saved securely on this device" else "Enter your Google AI Studio API key once") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
                 )
+                Button(onClick = {
+                    if (apiKey.isNotBlank()) scope.launch {
+                        try {
+                            vault.put(SecretVault.ALIAS_GEMINI, apiKey)
+                            apiKey = ""
+                            hasSavedKey = true
+                            showConnectionSettings = false
+                            status = "Gemini API key saved. Ready to talk."
+                        } catch (e: Exception) { status = "Could not securely save API key" }
+                    }
+                }, enabled = apiKey.isNotBlank()) { Text("Save API key") }
             }
         }
         Text(
@@ -159,7 +181,7 @@ fun GeminiLiveRoute(onRequestMicrophone: () -> Unit, microphoneGranted: Boolean)
 }
 
 private class GeminiLiveAudioSession(
-    private val token: String,
+    private val apiKey: String,
     private val onStatus: (String) -> Unit,
 ) {
     private val client = OkHttpClient.Builder().readTimeout(0, TimeUnit.MILLISECONDS).build()
@@ -175,7 +197,7 @@ private class GeminiLiveAudioSession(
         val endpoint = "wss://generativelanguage.googleapis.com/ws/" +
             "google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained"
         val request = Request.Builder().url(endpoint)
-            .header("Authorization", "Token $token").build()
+            .header("x-goog-api-key", apiKey).build()
         socket = client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 val setup = JSONObject().put("setup", JSONObject()
