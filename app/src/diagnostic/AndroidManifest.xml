@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Diagnostic-only overlay: isolate sensitive manifest declarations.
+     Not a Play Protect bypass or a production release. Features requiring
+     removed services/permissions are unavailable in this variant. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" tools:node="remove" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" tools:node="remove" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" tools:node="remove" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" tools:node="remove" />
+
+    <application>
+        <service android:name=".services.JarvisAccessibilityService" tools:node="remove" />
+        <service android:name=".services.JarvisNotificationListenerService" tools:node="remove" />
+        <receiver android:name=".receivers.BootReceiver" tools:node="remove" />
+    </application>
+</manifest>
