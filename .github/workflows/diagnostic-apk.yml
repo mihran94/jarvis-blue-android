@@ -63,6 +63,13 @@ jobs:
           "$APKSIGNER" verify --verbose --print-certs "$APK" | tee diagnostic-signing.txt
           grep -q 'Verifies' diagnostic-signing.txt
           sha256sum "$APK" | tee diagnostic-apk.sha256
+      - name: Upload diagnostic APK for authorized device testing
+        uses: actions/upload-artifact@v4
+        with:
+          name: JarvisBlue-DIAGNOSTIC-DEBUG-NOT-FOR-RELEASE
+          path: app/build/outputs/apk/diagnostic/app-diagnostic.apk
+          retention-days: 7
+          if-no-files-found: error
       - name: Upload audit reports only
         uses: actions/upload-artifact@v4
         with:
