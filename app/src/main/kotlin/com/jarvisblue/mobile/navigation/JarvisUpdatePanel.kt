@@ -20,6 +20,7 @@ fun JarvisUpdatePanel() {
     val context = LocalContext.current
     var latest by remember { mutableStateOf<ReleaseInfo?>(null) }
     var message by remember { mutableStateOf("Checking for updates…") }
+    var updateAvailable by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         try {
             latest = fetchLatestJarvisRelease()
@@ -34,7 +35,7 @@ fun JarvisUpdatePanel() {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("App updates", style = MaterialTheme.typography.titleMedium)
         Text(message, style = MaterialTheme.typography.bodySmall)
-        if (latest != null) {
+        if (updateAvailable && latest != null) {
             Button(onClick = {
                 context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(latest!!.url)))
             }, modifier = Modifier.fillMaxWidth()) {
@@ -61,4 +62,22 @@ private suspend fun fetchLatestJarvisRelease(): ReleaseInfo? = withContext(Dispa
         if (!url.startsWith("https://github.com/mihran94/jarvis-blue-android/releases/")) return@withContext null
         ReleaseInfo(json.optString("tag_name"), url)
     }
+}
+
+
+/** Compare stable numeric version segments, ignoring local -debug/-diagnostic suffixes. */
+private fun isNewerRelease(tag: String, installed: String): Boolean {
+    fun parts(value: String): List<Int>? {
+        val cleaned = value.trim().removePrefix("v").substringBefore("-")
+        if (!Regex("[0-9]+(\\.[0-9]+)*").matches(cleaned)) return null
+        return cleaned.split(".").map { it.toIntOrNull() ?: return null }
+    }
+    val remote = parts(tag) ?: return false
+    val local = parts(installed) ?: return false
+    for (index in 0 until maxOf(remote.size, local.size)) {
+        val a = remote.getOrElse(index) { 0 }
+        val b = local.getOrElse(index) { 0 }
+        if (a != b) return a > b
+    }
+    return false
 }
