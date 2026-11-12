@@ -110,7 +110,10 @@ fun JarvisApp(
                 ),
         ) {
             when (tab) {
-                JarvisTab.ASSISTANT -> GeminiLiveRoute(\n                    onRequestMicrophone = onRequestMicrophone,\n                    microphoneGranted = microphoneGranted,\n                )
+                JarvisTab.ASSISTANT -> GeminiLiveRoute(
+                    onRequestMicrophone = onRequestMicrophone,
+                    microphoneGranted = microphoneGranted,
+                )
                 JarvisTab.CHAT -> ChatRoute()
                 JarvisTab.PC -> WindowsRoute()
                 JarvisTab.SETTINGS -> SettingsRoute()
