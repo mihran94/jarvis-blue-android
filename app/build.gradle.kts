@@ -62,6 +62,14 @@ android {
             isMinifyEnabled = false
             isShrinkResources = false
         }
+        // Diagnostic build: same application code, reduced sensitive Android surface.
+        // Used only to isolate manifest-related Play Protect risk factors.
+        create("diagnostic") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".diagnostic"
+            versionNameSuffix = "-diagnostic"
+            matchingFallbacks += listOf("debug")
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
