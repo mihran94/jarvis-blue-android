@@ -1,6 +1,11 @@
 name: Diagnostic APK security build
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'scripts/check_sensitive_services.py'
+      - '.github/workflows/diagnostic-apk.yml'
   push:
     branches:
       - security/minimal-permission-diagnostic-20261112
