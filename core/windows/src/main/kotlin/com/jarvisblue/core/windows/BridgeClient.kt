@@ -48,9 +48,34 @@ import javax.crypto.spec.SecretKeySpec
 class BridgeClient(
     private val httpClient: OkHttpClient = defaultClient(),
     private val secretProvider: suspend () -> String?,
+    /**
+     * The fingerprint of the desktop certificate, when the pairing code
+     * carried one. With it the client trusts that certificate and nothing
+     * else; without it the normal system trust is used.
+     */
+    private val pinnedFingerprintProvider: suspend () -> String? = { null },
 ) {
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+
+    /** The pinned client is kept, because a new one would drop the connections. */
+    @Volatile
+    private var pinnedClient: Pair<String, OkHttpClient>? = null
+
+    /** The client to use, built for the pinned certificate when there is one. */
+    private suspend fun client(): OkHttpClient {
+        val fingerprint = pinnedFingerprintProvider()?.trim().orEmpty()
+        if (fingerprint.isEmpty()) {
+            return httpClient
+        }
+        val cached = pinnedClient
+        if (cached != null && cached.first.equals(fingerprint, ignoreCase = true)) {
+            return cached.second
+        }
+        val built = pinnedHttpClient(fingerprint, httpClient)
+        pinnedClient = fingerprint to built
+        return built
+    }
 
     suspend fun status(baseUrl: String): Outcome<PcStatus> = withContext(Dispatchers.IO) {
         runCatchingOutcomeSuspend {
@@ -96,6 +121,8 @@ class BridgeClient(
         onClosed: (String?) -> Unit,
     ): WebSocket? {
         val secret = runCatching { kotlinx.coroutines.runBlocking { secretProvider() } }.getOrNull()
+            ?: return null
+        val httpClient = runCatching { kotlinx.coroutines.runBlocking { client() } }.getOrNull()
             ?: return null
         val wsUrl = baseUrl.replaceFirst("https://", "wss://").replaceFirst("http://", "ws://") + "/ws"
         val timestamp = System.currentTimeMillis().toString()
@@ -151,8 +178,8 @@ class BridgeClient(
         return execute(request)
     }
 
-    private fun execute(request: Request): JsonObject {
-        httpClient.newCall(request).execute().use { response ->
+    private suspend fun execute(request: Request): JsonObject {
+        client().newCall(request).execute().use { response ->
             val payload = response.body?.string().orEmpty()
             if (!response.isSuccessful) {
                 throw when (response.code) {

@@ -11,6 +11,8 @@ import com.jarvisblue.core.model.PcStatus
 import com.jarvisblue.core.model.WindowsPeer
 import com.jarvisblue.core.security.SecretVault
 import com.jarvisblue.core.windows.BridgeClient
+import com.jarvisblue.core.windows.PairingCode
+import com.jarvisblue.core.windows.PairingCodeError
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,6 +27,7 @@ data class WindowsUiState(
     val hostInput: String = "",
     val portInput: String = "8765",
     val secretInput: String = "",
+    val codeInput: String = "",
     val status: PcStatus? = null,
     val jobs: List<BridgeJob> = emptyList(),
     val isBusy: Boolean = false,
@@ -63,6 +66,58 @@ class WindowsViewModel @Inject constructor(
         _state.value = _state.value.copy(secretInput = secret)
     }
 
+    /** The whole pairing code, as the desktop shows it. */
+    fun setCode(code: String) {
+        _state.value = _state.value.copy(codeInput = code)
+    }
+
+    /**
+     * Pair with the code the desktop showed.
+     *
+     * The code carries the address, the secret, the expiry and the
+     * fingerprint of the desktop certificate. The fingerprint is kept so the
+     * phone trusts that certificate and nothing else.
+     */
+    fun pairWithCode() {
+        val code = _state.value.codeInput.trim()
+        if (code.isEmpty()) {
+            _state.value = _state.value.copy(error = "Paste the pairing code from the desktop")
+            return
+        }
+        val pairing = try {
+            PairingCode.parse(code)
+        } catch (error: PairingCodeError) {
+            _state.value = _state.value.copy(error = error.message)
+            return
+        }
+        viewModelScope.launch {
+            secretVault.put(SecretVault.ALIAS_WINDOWS_PEER, pairing.secret)
+            if (pairing.fingerprint.isNotEmpty()) {
+                secretVault.put(SecretVault.ALIAS_WINDOWS_FINGERPRINT, pairing.fingerprint)
+            }
+            val peer = WindowsPeer(
+                peerId = "windows-${pairing.host.lowercase()}",
+                displayName = "JARVIS BLUE desktop",
+                host = pairing.host,
+                port = pairing.port,
+                pairedAtEpochMs = System.currentTimeMillis(),
+                lastSeenEpochMs = 0L,
+                sharedSecretAlias = SecretVault.ALIAS_WINDOWS_PEER,
+                trusted = true,
+            )
+            peerRepository.save(peer)
+            _state.value = _state.value.copy(
+                codeInput = "",
+                secretInput = "",
+                hostInput = pairing.host,
+                portInput = pairing.port.toString(),
+                statusLine = "Paired with ${pairing.host}:${pairing.port}",
+                error = null,
+            )
+            refresh()
+        }
+    }
+
     /** Stores the shared secret in the Keystore-backed vault and remembers the peer. */
     fun pair() {
         val host = _state.value.hostInput.trim()
@@ -97,6 +152,7 @@ class WindowsViewModel @Inject constructor(
     fun unpair() {
         viewModelScope.launch {
             secretVault.remove(SecretVault.ALIAS_WINDOWS_PEER)
+            secretVault.remove(SecretVault.ALIAS_WINDOWS_FINGERPRINT)
             _state.value.peer?.let { peerRepository.delete(it.peerId) }
             _state.value = _state.value.copy(
                 peer = null,

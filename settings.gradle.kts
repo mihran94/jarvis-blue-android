@@ -33,6 +33,7 @@ include(":core:ai")           // Android: multi-provider AI clients + router
 include(":core:tools")        // Android: tool registry, schema validation, risk gate, device control
 include(":core:voice")        // Android: wake word, STT/TTS, language detection
 include(":core:windows")      // Android: JARVIS BLUE desktop bridge client
+include(":core:updates")      // Android: update feed, digest check, no silent install
 include(":core:ui")           // Android: Compose design system (blue/black command centre)
 
 // ---- Features (thin UI + ViewModel layers) ----
