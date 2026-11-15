@@ -144,6 +144,7 @@ tasks.named("preBuild") { dependsOn(checkSensitiveServices) }
 
 dependencies {
     implementation(project(":core:model"))
+    implementation(project(":core:updates"))
     implementation(project(":core:common"))
     implementation(project(":core:security"))
     implementation(project(":core:database"))

@@ -271,8 +271,12 @@ class DbAuditSink(
             severity = runCatching {
                 com.jarvisblue.core.model.AuditSeverity.valueOf(severity)
             }.getOrDefault(com.jarvisblue.core.model.AuditSeverity.INFO),
-            title = title,
-            detail = detail,
+            // The audit trail is kept on the phone, so anything that looks
+            // like a key or a token is masked before it is written. The
+            // threat model promised this (T4) and now it is on the write
+            // path instead of only in the redactor.
+            title = com.jarvisblue.core.common.Redactor.redact(title),
+            detail = com.jarvisblue.core.common.Redactor.redact(detail),
             toolName = toolName,
             riskLevel = runCatching {
                 com.jarvisblue.core.model.RiskLevel.valueOf(riskLevel)
