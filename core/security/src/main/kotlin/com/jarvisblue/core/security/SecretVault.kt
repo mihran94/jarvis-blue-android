@@ -59,5 +59,8 @@ class SecretVault(
         const val ALIAS_MINIMAX = "minimax_api_key"
         const val ALIAS_OLLAMA = "ollama_api_key"
         const val ALIAS_WINDOWS_PEER = "windows_peer_secret"
+
+        /** The fingerprint of the desktop certificate that the phone pins. */
+        const val ALIAS_WINDOWS_FINGERPRINT = "windows_peer_fingerprint"
     }
 }

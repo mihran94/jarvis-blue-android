@@ -158,6 +158,8 @@ fun WindowsRoute(
         onHostChange = viewModel::setHost,
         onPortChange = viewModel::setPort,
         onSecretChange = viewModel::setSecret,
+        onCodeChange = viewModel::setCode,
+        onPairWithCode = viewModel::pairWithCode,
         onPair = viewModel::pair,
         onUnpair = viewModel::unpair,
         onRefresh = viewModel::refresh,
@@ -173,6 +175,8 @@ fun WindowsScreen(
     onHostChange: (String) -> Unit,
     onPortChange: (String) -> Unit,
     onSecretChange: (String) -> Unit,
+    onCodeChange: (String) -> Unit,
+    onPairWithCode: () -> Unit,
     onPair: () -> Unit,
     onUnpair: () -> Unit,
     onRefresh: () -> Unit,
@@ -219,6 +223,18 @@ fun WindowsScreen(
                             singleLine = true,
                             shape = RoundedCornerShape(12.dp),
                         )
+                        OutlinedTextField(
+                            value = state.codeInput,
+                            onValueChange = onCodeChange,
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Pairing code (paste it from the desktop)") },
+                            shape = RoundedCornerShape(12.dp),
+                            minLines = 3,
+                        )
+                        Button(
+                            onClick = onPairWithCode,
+                            enabled = state.codeInput.isNotBlank(),
+                        ) { Text("Pair with this code") }
                         OutlinedTextField(
                             value = state.secretInput,
                             onValueChange = onSecretChange,

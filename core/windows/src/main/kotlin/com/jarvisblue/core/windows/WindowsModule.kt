@@ -15,5 +15,6 @@ object WindowsModule {
     @Singleton
     fun provideBridgeClient(secretVault: SecretVault): BridgeClient = BridgeClient(
         secretProvider = { secretVault.get(SecretVault.ALIAS_WINDOWS_PEER) },
+        pinnedFingerprintProvider = { secretVault.get(SecretVault.ALIAS_WINDOWS_FINGERPRINT) },
     )
 }
